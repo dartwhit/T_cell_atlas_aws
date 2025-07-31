@@ -20,14 +20,15 @@ jobs:
             cd /home/ubuntu/T_cell_atlas_aws
             git pull origin main
 
-            echo "🔍 Looking for containers using port 3839..."
+            echo "🧹 Removing old container named 'atlas' (if any)..."
+            docker rm -f atlas || true
+
+            echo "🔍 Also removing any container using port 3839..."
             CONTAINER_ID=$(docker ps --filter "publish=3839" --format "{{.ID}}")
             if [ ! -z "$CONTAINER_ID" ]; then
-              echo "🛑 Stopping and removing container $CONTAINER_ID using port 3839"
+              echo "🛑 Stopping/removing container $CONTAINER_ID using port 3839"
               docker stop $CONTAINER_ID || true
               docker rm $CONTAINER_ID || true
-            else
-              echo "✅ No container is currently using port 3839"
             fi
 
             echo "🛠 Rebuilding Docker image..."
