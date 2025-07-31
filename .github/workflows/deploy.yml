@@ -20,19 +20,21 @@ jobs:
             cd /home/ubuntu/T_cell_atlas_aws
             git pull origin main
 
-            echo "🛑 Stopping and removing old container if running..."
-            if docker ps -q -f name=atlas; then
-              docker stop atlas || true
-              docker rm atlas || true
+            echo "🔍 Looking for containers using port 3839..."
+            CONTAINER_ID=$(docker ps --filter "publish=3839" --format "{{.ID}}")
+            if [ ! -z "$CONTAINER_ID" ]; then
+              echo "🛑 Stopping and removing container $CONTAINER_ID using port 3839"
+              docker stop $CONTAINER_ID || true
+              docker rm $CONTAINER_ID || true
+            else
+              echo "✅ No container is currently using port 3839"
             fi
-            echo "🔍 Killing anything still using port 3839..."
-            sudo fuser -k 3839/tcp || true
-                
-            echo "🛠 Rebuilding image..."
+
+            echo "🛠 Rebuilding Docker image..."
             docker build --no-cache -t atlas .
 
             echo "🚀 Running new container..."
-            docker run -d --restart always \
+            docker run -d \
               -p 3839:3838 \
               -v /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data \
               --name atlas \
