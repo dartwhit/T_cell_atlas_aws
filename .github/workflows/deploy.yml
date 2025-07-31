@@ -21,14 +21,18 @@ jobs:
             git pull origin main
 
             echo "🛑 Stopping and removing old container if running..."
-            docker stop atlas || true
-            docker rm atlas || true
-
+            if docker ps -q -f name=atlas; then
+              docker stop atlas || true
+              docker rm atlas || true
+            fi
+            echo "🔍 Killing anything still using port 3839..."
+            sudo fuser -k 3839/tcp || true
+                
             echo "🛠 Rebuilding image..."
             docker build --no-cache -t atlas .
 
             echo "🚀 Running new container..."
-            docker run -d \
+            docker run -d --restart always \
               -p 3839:3838 \
               -v /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data \
               --name atlas \
