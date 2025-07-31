@@ -17,7 +17,7 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd /home/ubuntu/atlas
+            cd /home/ubuntu/T_cell_atlas_aws
             git pull origin main
             docker stop atlas || true
             docker rm atlas || true
