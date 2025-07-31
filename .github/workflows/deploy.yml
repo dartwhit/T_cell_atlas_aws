@@ -8,9 +8,9 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Deploy to EC2 via SSH
+      - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -31,5 +31,4 @@ jobs:
           docker run -d \
           -p 3839:3838 \
           -v /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data \
-          --name atlas \
-          atlas
+          --name atlas atlas     
