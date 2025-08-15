@@ -3,7 +3,7 @@ name: Deploy DEV to EC2
 on:
   push:
     branches:
-      - gpt_dev
+      - dev
     paths:
       - 'Dockerfile'
       - '.github/workflows/deploy-dev.yml'
@@ -27,9 +27,9 @@ jobs:
             cd /home/ubuntu/T_cell_atlas_aws
 
             echo "📦 Switching to dev branch and pulling latest..."
-            git fetch origin gpt_dev
-            git checkout gpt_dev
-            git pull origin gpt_dev
+            git fetch origin dev
+            git checkout dev
+            git pull origin dev
 
             echo "🧹 Removing old container named 'atlas-dev' (if any)..."
             docker rm -f atlas-dev || true
