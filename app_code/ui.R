@@ -85,10 +85,21 @@ ui <- page_navbar(
         dimension = [window.innerWidth, window.innerHeight];
         Shiny.onInputChange("dimension", dimension);
       });
-      // Switch to the Explore tab when any explore button is clicked
-      $("button[id^='explore_']").on("click", function() {
+      // Function to switch to the Explore tab
+      $("#explore_Tabib").on("click", function() {
+        $("a[data-value=\'Explore\']").tab("show");
+      });$("#explore_Gur").on("click", function() {
         $("a[data-value=\'Explore\']").tab("show");
       });
+      $("#explore_Ma").on("click", function() {
+        $("a[data-value=\'Explore\']").tab("show");
+      });
+      $("#explore_tmkmh").on("click", function() {
+        $("a[data-value=\'Explore\']").tab("show");
+      });
+      $("#explore_Khanna").on("click", function() {
+        $("a[data-value=\'Explore\']").tab("show");
+});
     });
   ')
   ),
@@ -97,38 +108,43 @@ ui <- page_navbar(
   title = "SSc cell atlas",
   id = "nav_page",
   nav_panel("Get started",
-            {
-              featured <- dataset_info[dataset_info$featured, ][1,]
-              card(
-                full_screen = TRUE,
-                card_header(featured$title),
-                actionButton(paste0("explore_", featured$id), "Explore"),
-                imageOutput(paste0(featured$id, "_img"))
-              )
-            },
-            do.call(
-              layout_column_wrap,
-              c(
-                list(width = 1/4),
-                lapply(
-                  split(dataset_info[!dataset_info$featured, ],
-                        seq_len(nrow(dataset_info[!dataset_info$featured, ]))),
-                  function(ds) {
-                    card(
-                      full_screen = TRUE,
-                      card_header(ds$title),
-                      actionButton(paste0("explore_", ds$id), "Explore"),
-                      imageOutput(paste0(ds$id, "_img")),
-                      if (!is.na(ds$link) && nzchar(ds$link))
-                        a(
-                          href = ds$link,
-                          p(ds$citation),
-                          style = "color:grey", target = "_blank"
-                        )
-                    )
-                  }
-                )
-              )
+            card(full_screen = TRUE,
+                 card_header("TMKMH integrated dataset"),
+                 actionButton("explore_tmkmh","Explore"),
+                 imageOutput("TMKMH_img")
+                 
+                 )
+            ,
+            layout_column_wrap(
+              width = 1/4,
+
+              #Tabib
+              card(full_screen = TRUE,
+                   card_header("Tabib et al. 2021"),
+                   actionButton("explore_Tabib","Explore"),
+                   imageOutput("Tabib_img"),
+                   a(href = "https://www.nature.com/articles/s41467-021-24607-6",
+                     p(strong("Tabib, T., Huang, M., Morse, N., Papazoglou, A., Behera, R., Jia, M., Bulik, M., Monier, D. E., Benos, P. v., Chen, W., Domsic, R., & Lafyatis, R. (2021)."),"Myofibroblast transcriptome indicates SFRP2hi fibroblast progenitors in systemic sclerosis skin. Nature Communications, 12(1), 4384."),
+                     style = "color:grey", target="_blank")
+              ),
+              # Gur
+              card(full_screen = TRUE,
+                   card_header("Gur et al. 2022"),
+                   actionButton("explore_Gur","Explore"),
+                   imageOutput("Gur_img")),
+
+              # Ma
+              card(full_screen = TRUE,
+                   card_header("Ma et al. 2024"),
+                   actionButton("explore_Ma","Explore"),
+                   imageOutput("Ma_img")),
+
+              # Clark
+              card(full_screen = TRUE,
+                   card_header("Khanna et al. 2022"),
+                   actionButton("explore_Khanna","Explore"),
+                   imageOutput("Khanna_img")),
+
             )
   ),
   
@@ -140,10 +156,14 @@ ui <- page_navbar(
               sidebar = sidebar(
                 title = "Select dataset and genes",
                 position = "left",
-                selectInput(
-                  "study", "Select study to explore",
-                  choices = setNames(dataset_info$id, dataset_info$short_name)
-                ),
+                selectInput("study","Select study to explore",
+                            choices = c(
+                              "TMKMH" = "tmkmh",
+                              "Tabib et al." = "tabib",
+                              "Gur et al." = "gur",
+                              "Ma et al." = "ma",
+                              "Khanna et al" = "khanna"
+                            )),
 
                 
                 conditionalPanel(
