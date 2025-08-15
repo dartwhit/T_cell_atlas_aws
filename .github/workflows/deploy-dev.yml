@@ -1,0 +1,53 @@
+name: Deploy DEV to EC2
+
+on:
+  push:
+    branches:
+      - gpt_dev
+    paths:
+      - 'Dockerfile'
+      - '.github/workflows/deploy-dev.yml'
+      - 'app_code/**'
+      - 'shiny-server.conf'
+      - 'imgs/**'
+
+jobs:
+  deploy-dev:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy DEV to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            cd /home/ubuntu/T_cell_atlas_aws
+
+            echo "📦 Switching to dev branch and pulling latest..."
+            git fetch origin dev
+            git checkout dev
+            git pull origin dev
+
+            echo "🧹 Removing old container named 'atlas-dev' (if any)..."
+            docker rm -f atlas-dev || true
+
+            echo "🔍 Also removing any container using port 3840..."
+            CONTAINER_ID=$(docker ps --filter "publish=3840" --format "{{.ID}}")
+            if [ ! -z "$CONTAINER_ID" ]; then
+              echo "🛑 Stopping/removing container $CONTAINER_ID using port 3840"
+              docker stop $CONTAINER_ID || true
+              docker rm $CONTAINER_ID || true
+            fi
+
+            echo "🛠 Rebuilding DEV Docker image..."
+            docker build --no-cache -t atlas-dev .
+
+            echo "🚀 Running new DEV container..."
+            docker run -d \
+              --name atlas-dev \
+              -p 3840:3838 \
+              -v /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data \
+              atlas-dev
