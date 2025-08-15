@@ -18,69 +18,18 @@ server <- function(input, output,session) {
   
   
   # ########################## Starting page #######################
-  output$Tabib_img <- renderImage({
+  lapply(dataset_info$id, function(id) {
+    output[[paste0(id, "_img")]] <- renderImage({
+      screen_width <- input$dimension[1]
+      img_path <- file.path("imgs", dataset_info$image[dataset_info$id == id])
+      is_featured <- dataset_info$featured[dataset_info$id == id]
+      image_width <- if (is_featured) screen_width * 0.9 else (screen_width / 2) * 0.9
+      list(src = img_path, width = paste0(image_width, "px"))
+    }, deleteFile = FALSE)
 
-    screen_width <- input$dimension[1]
-    image_width <- (screen_width / 2)*0.9
-
-    list(src = "imgs/Tabib_img.png",
-         width = paste0(image_width, "px"))
-  }, deleteFile = FALSE)
-
-  output$Gur_img <- renderImage({
-
-    screen_width <- input$dimension[1]
-    image_width <- (screen_width / 2)*0.9
-
-    list(src = "imgs/Gur_img.png",
-         width = paste0(image_width, "px"))
-  }, deleteFile = FALSE)
-
-  output$Ma_img <- renderImage({
-
-    screen_width <- input$dimension[1]
-    image_width <- (screen_width / 2)*0.9
-
-    list(src = "imgs/Ma_img.png",
-         width = paste0(image_width, "px"))
-  }, deleteFile = FALSE)
-
-  output$Khanna_img <- renderImage({
-
-    screen_width <- input$dimension[1]
-    image_width <- (screen_width / 2)*0.9
-
-    list(src = "imgs/Khanna_img.png",
-         width = paste0(image_width, "px"))
-  }, deleteFile = FALSE)
-  
-  output$TMKMH_img <- renderImage({
-    image_width <- input$dimentions[1]*0.9
-    list(src = "imgs/TMKMH_img.png",
-      width = paste0(image_width,"px")
-    )
-  },
-  deleteFile = FALSE)
-  
-  
-  observeEvent(input$explore_Tabib,{
-    updateSelectInput(session, "study", selected = "tabib")
-  })
-  
-  observeEvent(input$explore_Gur,{
-    updateSelectInput(session, "study", selected = "gur")
-  })
-  
-  observeEvent(input$explore_Ma,{
-    updateSelectInput(session, "study", selected = "ma")
-  })
-  
-  observeEvent(input$explore_Khanna,{
-    updateSelectInput(session, "study", selected = "khanna")
-  })
-  
-  observeEvent(input$explore_tmkmh,{
-    updateSelectInput(session, "study", selected = "tmkmh")
+    observeEvent(input[[paste0("explore_", id)]], {
+      updateSelectInput(session, "study", selected = id)
+    })
   })
   
   ################################## Explore page #################################
