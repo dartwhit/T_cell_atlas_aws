@@ -42,7 +42,7 @@ jobs:
 
             echo "🚀 Running new container..."
             docker run -d \
-              --name atlas \
               -p 3839:3838 \
               -v /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data \
+              --name atlas \
               atlas
