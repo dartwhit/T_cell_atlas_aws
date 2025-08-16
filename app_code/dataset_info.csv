@@ -1,6 +1,0 @@
-id,short_name,title,image,citation,link,featured
-tmkmh,TMKMH,TMKMH integrated dataset,TMKMH_img.png,, ,TRUE
-tabib,"Tabib et al.","Tabib et al. 2021",Tabib_img.png,"Tabib, T., Huang, M., Morse, N., Papazoglou, A., Behera, R., Jia, M., Bulik, M., Monier, D. E., Benos, P. v., Chen, W., Domsic, R., & Lafyatis, R. (2021). Myofibroblast transcriptome indicates SFRP2hi fibroblast progenitors in systemic sclerosis skin. Nature Communications, 12(1), 4384.","https://www.nature.com/articles/s41467-021-24607-6",FALSE
-gur,"Gur et al.","Gur et al. 2022",Gur_img.png,,,FALSE
-ma,"Ma et al.","Ma et al. 2024",Ma_img.png,"Ma, F., Tsou, PS., Gharaee-Kermani, M. et al. Systems-based identification of the Hippo pathway for promoting fibrotic mesenchymal differentiation in systemic sclerosis. Nat Commun 15, 210 (2024)","https://www.nature.com/articles/s41467-023-44645-6",FALSE
-khanna,"Khanna et al","Khanna et al. 2022",Khanna_img.png,,,FALSE

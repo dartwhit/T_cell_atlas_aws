@@ -2,8 +2,7 @@ name: Deploy to EC2
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
     paths:
       - 'Dockerfile'
       - '.github/workflows/deploy.yml'
@@ -14,7 +13,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.0.3
@@ -22,27 +20,47 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
           script: |
-            cd /home/ubuntu/T_cell_atlas_aws
-            git pull origin main
+            set -euo pipefail
 
-            echo "🧹 Removing old container named 'atlas' (if any)..."
+            cd /home/ubuntu/T_cell_atlas_aws
+            git fetch origin
+            git checkout main
+            git reset --hard origin/main
+            git clean -xdf
+
+            echo "🧹 Removing existing prod container (if any)..."
             docker rm -f atlas || true
 
-            echo "🔍 Also removing any container using port 3839..."
+            echo "🔍 Freeing port 3839 if used..."
             CONTAINER_ID=$(docker ps --filter "publish=3839" --format "{{.ID}}")
-            if [ ! -z "$CONTAINER_ID" ]; then
-              echo "🛑 Stopping/removing container $CONTAINER_ID using port 3839"
-              docker stop $CONTAINER_ID || true
-              docker rm $CONTAINER_ID || true
+            if [ -n "${CONTAINER_ID:-}" ]; then
+              docker stop "$CONTAINER_ID" || true
+              docker rm "$CONTAINER_ID" || true
             fi
 
-            echo "🛠 Rebuilding Docker image..."
-            docker build --no-cache -t atlas .
+            echo "🛠 Rebuilding prod image..."
+            docker build --no-cache -t atlas:prod .
 
-            echo "🚀 Running new container..."
+            echo "🚀 Running new prod container..."
             docker run -d \
               --name atlas \
+              --restart unless-stopped \
               -p 3839:3838 \
-              -v /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data \
-              atlas
+              -e SHINY_LOG_STDERR=1 \
+              -v /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro \
+              -v /home/ubuntu/atlas/prod_cache:/srv/shiny-server/atlas/app_cache \
+              -v /home/ubuntu/atlas/logs/prod:/var/log/shiny-server \
+              atlas:prod
+
+            echo "🩺 Health check..."
+            sleep 3
+            if ! curl -sSf http://localhost:3839/atlas/ >/dev/null; then
+              echo "❌ Health check failed. Container logs:" >&2
+              docker logs --tail=200 atlas || true
+              exit 1
+            fi
+
+            # Optional: reclaim space from old dangling images
+            docker image prune -f || true

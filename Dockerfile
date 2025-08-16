@@ -26,6 +26,7 @@ RUN mkdir -p /var/log/shiny-server && \
     mkdir -p /srv/shiny-server/atlas/app_cache && \
     chmod 777 /srv/shiny-server/atlas/app_cache
 
+
 # Expose Shiny port
 EXPOSE 3838
 
