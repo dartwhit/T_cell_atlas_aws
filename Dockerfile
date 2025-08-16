@@ -22,9 +22,10 @@ COPY ./app_code/ /srv/shiny-server/atlas/
 COPY ./imgs/ /srv/shiny-server/atlas/imgs/
 COPY shiny-server.conf /etc/shiny-server/shiny-server.conf
 RUN mkdir -p /var/log/shiny-server && \
-    chown -R shiny:shiny /var/log/shiny-server
-    mkdir -p /srv/shiny-server/atlas/app_cache
+    chown -R shiny:shiny /var/log/shiny-server && \
+    mkdir -p /srv/shiny-server/atlas/app_cache && \
     chmod 777 /srv/shiny-server/atlas/app_cache
+
 
 # Expose Shiny port
 EXPOSE 3838
