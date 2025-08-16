@@ -2,8 +2,7 @@ inDir <- "/srv/shiny-server/atlas/data/"
 DE_dir <- "DE_dfs/"
 cat("Working directory is:", getwd(), "\n", file = stderr())
 
-# Read dataset metadata used for UI construction
-dataset_info <- read.csv("dataset_info.csv", stringsAsFactors = FALSE)
+
 
 # Define the file paths for your datasets
 dataset_files <- list(
