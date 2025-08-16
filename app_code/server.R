@@ -17,72 +17,52 @@ options(shiny.trace = TRUE)
 server <- function(input, output,session) {
   
   
-  # ########################## Starting page #######################
-  output$Tabib_img <- renderImage({
-
-    screen_width <- input$dimension[1]
-    image_width <- (screen_width / 2)*0.9
-
-    list(src = "imgs/Tabib_img.png",
-         width = paste0(image_width, "px"))
-  }, deleteFile = FALSE)
-
-  output$Gur_img <- renderImage({
-
-    screen_width <- input$dimension[1]
-    image_width <- (screen_width / 2)*0.9
-
-    list(src = "imgs/Gur_img.png",
-         width = paste0(image_width, "px"))
-  }, deleteFile = FALSE)
-
-  output$Ma_img <- renderImage({
-
-    screen_width <- input$dimension[1]
-    image_width <- (screen_width / 2)*0.9
-
-    list(src = "imgs/Ma_img.png",
-         width = paste0(image_width, "px"))
-  }, deleteFile = FALSE)
-
-  output$Khanna_img <- renderImage({
-
-    screen_width <- input$dimension[1]
-    image_width <- (screen_width / 2)*0.9
-
-    list(src = "imgs/Khanna_img.png",
-         width = paste0(image_width, "px"))
-  }, deleteFile = FALSE)
-  
-  output$TMKMH_img <- renderImage({
-    image_width <- input$dimentions[1]*0.9
-    list(src = "imgs/TMKMH_img.png",
-      width = paste0(image_width,"px")
-    )
-  },
-  deleteFile = FALSE)
-  
-  
-  observeEvent(input$explore_Tabib,{
-    updateSelectInput(session, "study", selected = "tabib")
+  # ########################## Dataset gallery #######################
+  filtered_datasets <- reactive({
+    data <- dataset_meta
+    if (input$assay != "All") {
+      data <- data[data$assay == input$assay, ]
+    }
+    data <- data[data$n_cells >= input$cell_count[1] & data$n_cells <= input$cell_count[2], ]
+    if (nzchar(input$search)) {
+      term <- tolower(input$search)
+      data <- data[
+        grepl(term, tolower(data$name)) |
+          grepl(term, tolower(data$tags)) |
+          grepl(term, tolower(data$desc)),
+        ]
+    }
+    data
   })
-  
-  observeEvent(input$explore_Gur,{
-    updateSelectInput(session, "study", selected = "gur")
+
+  output$gallery <- renderUI({
+    data <- filtered_datasets()
+    if (nrow(data) == 0) {
+      return(p("No datasets found."))
+    }
+    cards <- lapply(seq_len(nrow(data)), function(i) {
+      row <- data[i, ]
+      badges <- lapply(c(row$assay, strsplit(row$tags, ",")[[1]]), function(tg) {
+        tags$span(class = "badge", tg)
+      })
+      tags$div(
+        class = "dataset-card",
+        tags$img(src = row$image, class = "dataset-img", alt = row$name),
+        h4(row$name),
+        badges,
+        tags$p(sprintf("%s cells", row$n_cells)),
+        actionButton(paste0("explore_", row$id), "Analyze")
+      )
+    })
+    div(class = "dataset-gallery", cards)
   })
-  
-  observeEvent(input$explore_Ma,{
-    updateSelectInput(session, "study", selected = "ma")
+
+  lapply(dataset_meta$id, function(id) {
+    observeEvent(input[[paste0("explore_", id)]], {
+      updateSelectInput(session, "study", selected = id)
+    })
   })
-  
-  observeEvent(input$explore_Khanna,{
-    updateSelectInput(session, "study", selected = "khanna")
-  })
-  
-  observeEvent(input$explore_tmkmh,{
-    updateSelectInput(session, "study", selected = "tmkmh")
-  })
-  
+
   ################################## Explore page #################################
   
 
