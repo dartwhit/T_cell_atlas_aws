@@ -6,165 +6,28 @@ cat("Working directory is:", getwd(), "\n", file = stderr())
 dataset_info <- read.csv("dataset_info.csv", stringsAsFactors = FALSE)
 
 # Define the file paths for your datasets
-dataset_files <- list(
-  # --------- TMKMH dataset ------------
-  "tmkmh" = list(
-    # "meta" = "",
-    "full" = list(
-      "seurat" = "TMKMH_filtered_reduced_2025-06-06_VAM.rds",
-      "gene_list" = "TMKMH_gene_list.rds",
-      "DEGs_auto" = "TMKMH_auto_DEGs_sig.txt",
-      "DEGs_broad" = "TMKMH_broad_DEGs_sig.txt",
-      "VAM_df" = "TMKMH_full_filtered_VAM_top.txt",
-      "DE_by_disease_broad" = "TMKMH_full_broad_DE_by_disease.txt",
-      "DE_by_disease_auto" = "TMKMH_full_auto_DE_by_disease.txt"
-    ),
-    "fib" = list(
-      "seurat" = "TMKMH_fib_filtered_VAM.rds",
-      "gene_list" = "TMKMH_fib_gene_list.rds",
-      "DEGs" = "TMKMH_fib_DEGs_sig.txt",
-      "VAM_df" = "TMKMH_fib_filtered_VAM_top.txt",
-      "DE_by_disease" = "TMKMH_fib_DE_by_disease.txt",
-      "VAM_by_disease" = "TMKMH_fib_VAMcdf_DE_by_disease.txt"
-    ),
-    "immune" = list(
-      "seurat" = "TMKMH_immune_filtered_VAM.rds",
-      "gene_list" = "TMKMH_immune_gene_list.rds",
-      "DEGs" = "TMKMH_immune_DEGs_sig.txt",
-      "VAM_df" = "TMKMH_immune_filtered_VAM_top.txt",
-      "DE_by_disease" = ""
-    )
-  )
-  ,
-  # ----------- Tabib dataset ---------
-  "tabib" = list(
-    "meta" = "Tabib_metadata.txt",
-    "full" = list(
-      "seurat" = "Tabib_full_filtered_VAM.rds",
-      "gene_list" = "Tabib_gene_list.rds",
-      "DEGs_auto" = "Tabib_auto_DEGs.csv",
-      "DEGs_broad" = "Tabib_broad_DEGs_sig.txt",
-      "VAM_df" = "Tabib_full_filtered_VAM_top.txt",
-      "DE_by_disease_broad" = "Tabib_broad_DE_by_disease.txt",
-      "DE_by_disease_auto" = "Tabib_auto_DE_by_disease.txt",
-      "VAM_by_disease_broad" = "Tabib_broad_VAMcdf_DE_by_disease.txt",
-      "VAM_by_disease_auto" = "Tabib_auto_VAMcdf_DE_by_disease.txt"
-    ),
-    "fib" = list(
-      "seurat" = "Tabib_fib_filtered_VAM.rds",
-      "gene_list" = "Tabib_fib_gene_list.rds",
-      "DEGs" = "Tabib_fib_DEGs_sig.txt",
-      "VAM_df" = "Tabib_fib_filtered_VAM_top.txt",
-      "DE_by_disease" = "Tabib_fib_DE_by_disease.txt",
-      "VAM_by_disease" = "Tabib_fib_VAMcdf_DE_by_disease.txt"
-    ),
-    "immune" = list(
-      "seurat" = "Tabib_immune_filtered_VAM.rds",
-      "gene_list" = "Tabib_immune_gene_list.rds",
-      "DEGs" = "Tabib_immune_DEGs_sig.txt",
-      "VAM_df" = "Tabib_immune_filtered_VAM_top.txt",
-      "DE_by_disease" = "Tabib_immune_DE_by_disease.txt",
-      "VAM_by_disease" = "Tabib_immune_VAMcdf_DE_by_disease.txt"
-    )
-  ),
-  # ------------- Gur Dataset ------------
-  "gur" = list(
-    "meta" = "Gur_metadata.txt",
-    "full" = list(
-      "seurat" = "Gur_full_filtered_VAM.rds",
-      "gene_list" = "Gur_gene_list.rds",
-      "DEGs_auto" = "Gur_auto_DEGs_sig.txt",
-      "DEGs_broad" = "Gur_broad_DEGs_sig.txt",
-      "VAM_df" = "Gur_full_filtered_VAM_top.txt",
-      "DE_by_disease_broad" = "Gur_full_broad_DE_by_disease.txt",
-      "DE_by_disease_auto" = "Gur_full_auto_DE_by_disease.txt",
-      "VAM_by_disease_broad" = "Gur_broad_VAMcdf_DE_by_disease.txt",
-      "VAM_by_disease_auto" = "Gur_auto_VAMcdf_DE_by_disease.txt"
-      
-    ),
-    "fib" = list(
-      "seurat" = "Gur_fib_filtered_VAM.rds",
-      "gene_list" = "Gur_fib_gene_list.rds",
-      "DEGs" = "Gur_fib_DEGs_sig.txt",
-      "VAM_df" = "Gur_fib_filtered_VAM_top.txt",
-      "DE_by_disease" = "Gur_fib_DE_by_disease.txt",
-      "VAM_by_disease" = "Gur_fib_VAMcdf_DE_by_disease.txt"
-    ),
-    "immune" = list(
-      "seurat" = "Gur_immune_filtered_VAM.rds",
-      "gene_list" = "Gur_immune_gene_list.rds",
-      "DEGs" = "Gur_immune_DEGs_sig.txt",
-      "VAM_df" = "Gur_immune_filtered_VAM_top.txt",
-      "DE_by_disease" = "Gur_immune_DE_by_disease.txt",
-      "VAM_by_disease" = "Gur_immune_VAMcdf_DE_by_disease.txt"
-      
-    )
-  ),
-  # -------------- Ma dataset --------------
-  "ma" = list(
-    "full" = list(
-      "seurat" = "Ma_filtered_reduced_2025-01-28_VAM.rds",
-      "gene_list" = "Ma_gene_list.rds",
-      "DEGs_auto" = "Ma_auto_DEGs_sig.txt",
-      "DEGs_broad" = "Ma_broad_DEGs_sig.txt",
-      "VAM_df" = "Ma_filtered_reduced_2025-01-28_VAM_top.txt",
-      "DE_by_disease_broad" = "Ma_full_broad_DE_by_disease.txt",
-      "DE_by_disease_auto" = "Ma_full_auto_DE_by_disease.txt"
-    ),
-    "mye" = list(
-      "seurat" = "Ma_mye_filtered_VAM.rds",
-      "gene_list" = "Ma_mye_gene_list.rds",
-      "DEGs" = "Ma_mye_DEGs_sig.txt",
-      "VAM_df" = "Ma_mye_filtered_VAM_top.txt",
-      "DE_by_disease" = "Ma_mye_DE_by_disease.txt"
-    ),
-    "fib" = list(
-      "seurat" = "Ma_fib_filtered_VAM.rds",
-      "gene_list" = "Ma_fib_gene_list.rds",
-      "DEGs" = "Ma_fib_DEGs_sig.txt",
-      "VAM_df" = "Ma_fib_filtered_VAM_top.txt",
-      "DE_by_disease" = "Ma_fib_DE_by_disease.txt"
-    )
-    
-  ),
-  # ------------- Khanna Dataset -------------
-  "khanna" = list(
-    "full" = list(
-      "seurat" = "Khanna_filtered_reduced_2025-01-28_VAM.rds",
-      "gene_list" = "Khanna_gene_list.rds",
-      "DEGs_auto" = "Khanna_auto_DEGs_sig.txt",
-      "DEGs_broad" = "Khanna_broad_DEGs_sig.txt",
-      "VAM_df" = "Khanna_filtered_reduced_2025-01-28_VAM_top.txt"
-    ),
-    "fib" = list(
-      "seurat" = "Khanna_fib_filtered_VAM.rds",
-      "gene_list" = "Khanna_fib_gene_list.rds",
-      "DEGs" = "Khanna_fib_DEGs_sig.txt",
-      "VAM_df" = "Khanna_fib_filtered_VAM_top.txt"
-    ),
-    "mye" = list(
-      "seurat" = "Khanna_mye_filtered_VAM.rds",
-      "gene_list" = "Khanna_mye_gene_list.rds",
-      "DEGs" = "Khanna_mye_DEGs_sig.txt",
-      "VAM_df" = "Khanna_mye_filtered_VAM_top.txt"
-      
-    )
-  )
-)
-
+file_map <- read.csv("dataset_files.csv", stringsAsFactors = FALSE)
+dataset_files <- split(file_map, file_map$dataset_id) |>
+  lapply(function(df) {
+    split(df, df$data_level) |>
+      lapply(function(x) {
+        files <- setNames(x$filename, x$file_type)
+        if (length(files) == 1) unname(files) else files
+      })
+  })
 
 data_level_choices <- list(
-  tabib = c("Full" = "full", 
-            "Fibroblasts" = "fib", 
+  tabib = c("Full" = "full",
+            "Fibroblasts" = "fib",
             "Immune cells" = "immune"),
   gur = c("Full" = "full",
-          "Fibroblasts" = "fib", 
+          "Fibroblasts" = "fib",
           "Immune cells" = "immune"),
-  ma = c("Full" = "full", 
-         "Myeloid cells" = "mye", 
+  ma = c("Full" = "full",
+         "Myeloid cells" = "mye",
          "Fibroblasts" = "fib"),
   khanna = c("Full" = "full",
-             "Myeloid cells" = "mye", 
+             "Myeloid cells" = "mye",
              "Fibroblasts" = "fib"), # Example: only "Full" data available for Clark
   tmkmh = c("Full" = "full",
             "Fibroblasts" = "fib",
