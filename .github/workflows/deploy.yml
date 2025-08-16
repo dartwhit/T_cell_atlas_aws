@@ -24,7 +24,11 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd /home/ubuntu/T_cell_atlas_aws
-            git pull origin main
+            git fetch origin
+            git checkout main
+            git reset --hard origin/main
+            git clean -xdf   # remove untracked files/dirs so no dev leftovers
+
 
             echo "🧹 Removing old container named 'atlas' (if any)..."
             docker rm -f atlas || true
