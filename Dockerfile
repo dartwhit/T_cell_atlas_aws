@@ -19,7 +19,6 @@ RUN R -e 'install.packages(c("plotly", "igraph", "Seurat", "Matrix", "SeuratObje
 
 # Copy Shiny app code
 COPY ./app_code/ /srv/shiny-server/atlas/
-COPY ./imgs/ /srv/shiny-server/atlas/imgs/
 COPY shiny-server.conf /etc/shiny-server/shiny-server.conf
 RUN mkdir -p /var/log/shiny-server && \
     chown -R shiny:shiny /var/log/shiny-server && \
