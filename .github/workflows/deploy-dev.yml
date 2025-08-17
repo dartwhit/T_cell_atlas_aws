@@ -3,7 +3,7 @@ name: Deploy DEV to EC2
 on:
   push:
     branches:
-      - dev
+      - ui_dev
     paths:
       - 'Dockerfile'
       - '.github/workflows/deploy-dev.yml'
