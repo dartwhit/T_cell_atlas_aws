@@ -1,4 +1,4 @@
-inDir <- "/srv/shiny-server/atlas/data/"
+inDir <- "data/"
 DE_dir <- "DE_dfs/"
 cat("Working directory is:", getwd(), "\n", file = stderr())
 

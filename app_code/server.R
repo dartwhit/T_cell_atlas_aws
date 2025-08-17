@@ -15,7 +15,8 @@ options(shiny.trace = TRUE)
 
 # Define server logic required to draw a histogram
 server <- function(input, output,session) {
-  
+  options(shiny.trace = FALSE, shiny.fullstacktrace = FALSE, shiny.sanitize.errors = TRUE)
+
   
   # ########################## Starting page #######################
   output$Tabib_img <- renderImage({
