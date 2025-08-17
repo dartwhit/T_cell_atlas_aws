@@ -2,5 +2,5 @@ id	name	assay	n_cells	file_path	image	tags	desc
 tmkmh	TMKMH integrated dataset	RNA	35000	TMKMH_filtered_reduced_2025-06-06_VAM.rds	imgs/TMKMH_img.png	fib,immune	Integrated dataset from TMKMH study.
 tabib	Tabib et al. 2021	RNA	10000	Tabib_full_filtered_VAM.rds	imgs/Tabib_img.png	fib	Myofibroblast transcriptome indicates SFRP2hi fibroblast progenitors in systemic sclerosis skin.
 gur	Gur et al. 2022	RNA	15000	Gur_full_filtered_VAM.rds	imgs/Gur_img.png	immune	Gur dataset.
-ma	Ma et al. 2024	RNA	12000	Ma_filtered_reduced_2025-01-28_VAM.rds	imgs/Ma_img.png	mye,fib	Ma dataset.
+ma	Ma et al. 2024	RNA,spat	12000	Ma_filtered_reduced_2025-01-28_VAM.rds	imgs/Ma_img.png	mye,fib	Ma dataset.
 khanna	Khanna et al. 2022	RNA	18000	Khanna_filtered_reduced_2025-01-28_VAM.rds	imgs/Khanna_img.png	fib,mye	Khanna dataset.
