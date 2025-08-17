@@ -77,38 +77,81 @@ ui <- page_navbar(
   useShinyjs(), # Enable shinyjs
 
   tags$head(
-    tags$script('
-    $(document).on("shiny:connected", function(e) {
-      dimension = [window.innerWidth, window.innerHeight];
-      Shiny.onInputChange("dimension", dimension);
-      $(window).resize(function(e) {
-        dimension = [window.innerWidth, window.innerHeight];
-        Shiny.onInputChange("dimension", dimension);
+    tags$script(HTML('
+      $(document).on("shiny:connected", function() {
+        function updateDimensions() {
+          Shiny.onInputChange("dimension", [window.innerWidth, window.innerHeight]);
+        }
+        updateDimensions();
+        $(window).resize(updateDimensions);
+
+        // Any element with id starting with "explore_" switches to Explore tab
+        $("[id^=\'explore_\']").on("click", function() {
+          $("a[data-value=\'Explore\']").tab("show");
+        });
       });
-      $(document).on("click", "[id^=explore_]", function() {
-        $("a[data-value=\'Explore\']").tab("show");
-      });
-    });
-  '),
+    ')),
     tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+
+
   ),
   theme = bs_theme(bootswatch = "flatly"),
   # Page title
   title = "SSc cell atlas",
   id = "nav_page",
-  nav_panel(
+  # nav_panel("Datasets",
+  #           card(full_screen = TRUE,
+  #                card_header("TMKMH integrated dataset"),
+  #                actionButton("explore_tmkmh","Explore"),
+  #                imageOutput("TMKMH_img")
+                 
+  #                )
+  #           ,
+  #           layout_column_wrap(
+  #             width = 1/4,
+
+  #             #Tabib
+  #             card(full_screen = TRUE,
+  #                  card_header("Tabib et al. 2021"),
+  #                  actionButton("explore_Tabib","Explore"),
+  #                  imageOutput("Tabib_img"),
+  #                  a(href = "https://www.nature.com/articles/s41467-021-24607-6",
+  #                    p(strong("Tabib, T., Huang, M., Morse, N., Papazoglou, A., Behera, R., Jia, M., Bulik, M., Monier, D. E., Benos, P. v., Chen, W., Domsic, R., & Lafyatis, R. (2021)."),"Myofibroblast transcriptome indicates SFRP2hi fibroblast progenitors in systemic sclerosis skin. Nature Communications, 12(1), 4384."),
+  #                    style = "color:grey", target="_blank")
+  #             ),
+  #             # Gur
+  #             card(full_screen = TRUE,
+  #                  card_header("Gur et al. 2022"),
+  #                  actionButton("explore_Gur","Explore"),
+  #                  imageOutput("Gur_img")),
+
+  #             # Ma
+  #             card(full_screen = TRUE,
+  #                  card_header("Ma et al. 2024"),
+  #                  actionButton("explore_Ma","Explore"),
+  #                  imageOutput("Ma_img")),
+
+  #             # Clark
+  #             card(full_screen = TRUE,
+  #                  card_header("Khanna et al. 2022"),
+  #                  actionButton("explore_Khanna","Explore"),
+  #                  imageOutput("Khanna_img")),
+
+  #           )
+  # ),
+    nav_panel(
     "Datasets",
     layout_sidebar(
       sidebar = sidebar(
         textInput("search", "Search"),
-        selectInput("assay", "Assay", choices = c("All", unique(dataset_meta$assay))),
-        sliderInput(
-          "cell_count",
-          "Cell count",
-          min = 0,
-          max = max(dataset_meta$n_cells),
-          value = c(0, max(dataset_meta$n_cells))
-        )
+        selectInput("assay", "Assay", choices = c("All", unique(dataset_meta$assay)))
+        # sliderInput(
+        #   "cell_count",
+        #   "Cell count",
+        #   min = 0,
+        #   max = max(dataset_meta$n_cells),
+        #   value = c(0, max(dataset_meta$n_cells))
+        # )
       ),
       uiOutput("gallery")
     )

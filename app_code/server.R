@@ -15,23 +15,23 @@ options(shiny.trace = TRUE)
 
 # Define server logic required to draw a histogram
 server <- function(input, output,session) {
-  
-  
-  # ########################## Dataset gallery #######################
+  options(shiny.trace = FALSE, shiny.fullstacktrace = FALSE, shiny.sanitize.errors = TRUE)
+
+# ########################## Dataset gallery #######################
   filtered_datasets <- reactive({
     data <- dataset_meta
-    if (input$assay != "All") {
-      data <- data[data$assay == input$assay, ]
-    }
-    data <- data[data$n_cells >= input$cell_count[1] & data$n_cells <= input$cell_count[2], ]
-    if (nzchar(input$search)) {
-      term <- tolower(input$search)
-      data <- data[
-        grepl(term, tolower(data$name)) |
-          grepl(term, tolower(data$tags)) |
-          grepl(term, tolower(data$desc)),
-        ]
-    }
+    # if (input$assay != "All") {
+    #   data <- data[data$assay == input$assay, ]
+    # }
+    # # data <- data[data$n_cells >= input$cell_count[1] & data$n_cells <= input$cell_count[2], ]
+    # if (nzchar(input$search)) {
+    #   term <- tolower(input$search)
+    #   data <- data[
+    #     grepl(term, tolower(data$name)) |
+    #       grepl(term, tolower(data$tags)) |
+    #       grepl(term, tolower(data$desc)),
+    #     ]
+    # }
     data
   })
 
@@ -61,6 +61,73 @@ server <- function(input, output,session) {
     observeEvent(input[[paste0("explore_", id)]], {
       updateSelectInput(session, "study", selected = id)
     })
+  })
+
+  
+  # # ########################## Starting page #######################
+  # output$Tabib_img <- renderImage({
+
+  #   screen_width <- input$dimension[1]
+  #   image_width <- (screen_width / 2)*0.9
+
+  #   list(src = "imgs/Tabib_img.png",
+  #        width = paste0(image_width, "px"))
+  # }, deleteFile = FALSE)
+
+  # output$Gur_img <- renderImage({
+
+  #   screen_width <- input$dimension[1]
+  #   image_width <- (screen_width / 2)*0.9
+
+  #   list(src = "imgs/Gur_img.png",
+  #        width = paste0(image_width, "px"))
+  # }, deleteFile = FALSE)
+
+  # output$Ma_img <- renderImage({
+
+  #   screen_width <- input$dimension[1]
+  #   image_width <- (screen_width / 2)*0.9
+
+  #   list(src = "imgs/Ma_img.png",
+  #        width = paste0(image_width, "px"))
+  # }, deleteFile = FALSE)
+
+  # output$Khanna_img <- renderImage({
+
+  #   screen_width <- input$dimension[1]
+  #   image_width <- (screen_width / 2)*0.9
+
+  #   list(src = "imgs/Khanna_img.png",
+  #        width = paste0(image_width, "px"))
+  # }, deleteFile = FALSE)
+  
+  # output$TMKMH_img <- renderImage({
+  #   image_width <- input$dimentions[1]*0.9
+  #   list(src = "imgs/TMKMH_img.png",
+  #     width = paste0(image_width,"px")
+  #   )
+  # },
+  # deleteFile = FALSE)
+  
+  
+  observeEvent(input$explore_Tabib,{
+    updateSelectInput(session, "study", selected = "tabib")
+  })
+  
+  observeEvent(input$explore_Gur,{
+    updateSelectInput(session, "study", selected = "gur")
+  })
+  
+  observeEvent(input$explore_Ma,{
+    updateSelectInput(session, "study", selected = "ma")
+  })
+  
+  observeEvent(input$explore_Khanna,{
+    updateSelectInput(session, "study", selected = "khanna")
+  })
+  
+  observeEvent(input$explore_tmkmh,{
+    updateSelectInput(session, "study", selected = "tmkmh")
   })
 
   ################################## Explore page #################################

@@ -1,10 +1,11 @@
-inDir <- "/srv/shiny-server/atlas/data/"
+inDir <- "data/"
 DE_dir <- "DE_dfs/"
 cat("Working directory is:", getwd(), "\n", file = stderr())
 
 
+
 dataset_meta <- read.delim(
-  file.path("..", "config", "datasets.tsv"),
+  file.path("config", "datasets.tsv"),
   sep = "\t",
   stringsAsFactors = FALSE
 )
