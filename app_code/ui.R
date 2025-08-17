@@ -90,7 +90,8 @@ ui <- page_navbar(
           $("a[data-value=\'Explore\']").tab("show");
         });
       });
-    '))
+    ')),
+    tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
 
 
   ),
@@ -143,14 +144,14 @@ ui <- page_navbar(
     layout_sidebar(
       sidebar = sidebar(
         textInput("search", "Search"),
-        selectInput("assay", "Assay", choices = c("All", unique(dataset_meta$assay))),
-        sliderInput(
-          "cell_count",
-          "Cell count",
-          min = 0,
-          max = max(dataset_meta$n_cells),
-          value = c(0, max(dataset_meta$n_cells))
-        )
+        selectInput("assay", "Assay", choices = c("All", unique(dataset_meta$assay)))
+        # sliderInput(
+        #   "cell_count",
+        #   "Cell count",
+        #   min = 0,
+        #   max = max(dataset_meta$n_cells),
+        #   value = c(0, max(dataset_meta$n_cells))
+        # )
       ),
       uiOutput("gallery")
     )

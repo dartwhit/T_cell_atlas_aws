@@ -20,18 +20,18 @@ server <- function(input, output,session) {
 # ########################## Dataset gallery #######################
   filtered_datasets <- reactive({
     data <- dataset_meta
-    if (input$assay != "All") {
-      data <- data[data$assay == input$assay, ]
-    }
-    data <- data[data$n_cells >= input$cell_count[1] & data$n_cells <= input$cell_count[2], ]
-    if (nzchar(input$search)) {
-      term <- tolower(input$search)
-      data <- data[
-        grepl(term, tolower(data$name)) |
-          grepl(term, tolower(data$tags)) |
-          grepl(term, tolower(data$desc)),
-        ]
-    }
+    # if (input$assay != "All") {
+    #   data <- data[data$assay == input$assay, ]
+    # }
+    # # data <- data[data$n_cells >= input$cell_count[1] & data$n_cells <= input$cell_count[2], ]
+    # if (nzchar(input$search)) {
+    #   term <- tolower(input$search)
+    #   data <- data[
+    #     grepl(term, tolower(data$name)) |
+    #       grepl(term, tolower(data$tags)) |
+    #       grepl(term, tolower(data$desc)),
+    #     ]
+    # }
     data
   })
 

@@ -5,7 +5,7 @@ cat("Working directory is:", getwd(), "\n", file = stderr())
 
 
 dataset_meta <- read.delim(
-  file.path("..", "config", "datasets.tsv"),
+  file.path("config", "datasets.tsv"),
   sep = "\t",
   stringsAsFactors = FALSE
 )
