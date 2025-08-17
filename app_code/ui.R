@@ -77,31 +77,22 @@ ui <- page_navbar(
   useShinyjs(), # Enable shinyjs
 
   tags$head(
-    tags$script('
-    $(document).on("shiny:connected", function(e) {
-      dimension = [window.innerWidth, window.innerHeight];
-      Shiny.onInputChange("dimension", dimension);
-      $(window).resize(function(e) {
-        dimension = [window.innerWidth, window.innerHeight];
-        Shiny.onInputChange("dimension", dimension);
+    tags$script(HTML('
+      $(document).on("shiny:connected", function() {
+        function updateDimensions() {
+          Shiny.onInputChange("dimension", [window.innerWidth, window.innerHeight]);
+        }
+        updateDimensions();
+        $(window).resize(updateDimensions);
+
+        // Any element with id starting with "explore_" switches to Explore tab
+        $("[id^=\'explore_\']").on("click", function() {
+          $("a[data-value=\'Explore\']").tab("show");
+        });
       });
-      // Function to switch to the Explore tab
-      $("#explore_Tabib").on("click", function() {
-        $("a[data-value=\'Explore\']").tab("show");
-      });$("#explore_Gur").on("click", function() {
-        $("a[data-value=\'Explore\']").tab("show");
-      });
-      $("#explore_Ma").on("click", function() {
-        $("a[data-value=\'Explore\']").tab("show");
-      });
-      $("#explore_tmkmh").on("click", function() {
-        $("a[data-value=\'Explore\']").tab("show");
-      });
-      $("#explore_Khanna").on("click", function() {
-        $("a[data-value=\'Explore\']").tab("show");
-});
-    });
-  ')
+    '))
+
+
   ),
   theme = bs_theme(bootswatch = "flatly"),
   # Page title
