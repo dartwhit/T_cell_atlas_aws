@@ -23,24 +23,29 @@ spatial_UI <- function(id) {
                   "Key regions" =  "Key_Regions"),
                 selected = "cluster"),
       selectizeInput(ns("feature"), "Feature (Gene/pathway)",multiple = TRUE,
-      choices = NULL, options = list(placeholder = "Type to search…"))
+      choices = NULL, options = list(placeholder = "Type to search…")),
+      # Select sampels to show
+      checkboxGroupInput(ns("samples"),
+                    "Select samples to view"
+                  )
     ),# End of sidebar
     # ----------- Right side --------------
     layout_columns(
       col_widths = c(6,6),
       card(
         card_header("UMAP (Idents)"),
-        plotOutput(ns("umap"))
+        plotOutput(ns("umap"),height=380)
       ),
       card(
         card_header("Feature plot"),
-        plotOutput(ns("featureplot"))
+        plotOutput(ns("featureplot"),height=380)
       )
     ),
-      card(
-        card_header("Spatial Dimplot"),
-        plotOutput(ns("spatdim"))
-      )
+      # Dynamic grid of spatial plots (one per checked sample)
+    card(
+      card_header("Spatial Dimplots"),
+      uiOutput(ns("spatial_grid"))
+    )
   )
 }
 
@@ -59,8 +64,10 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
       readRDS(rds_path)
     }
 
-    updateSelectizeInput(session, "feature", choices = rownames(obj[["SCT"]]), server = TRUE)
+    safe_id <- function(x) gsub("[^A-Za-z0-9_]", "_", x)
 
+    updateSelectizeInput(session, "feature", choices = rownames(obj[["SCT"]]), server = TRUE)
+    updateCheckboxGroupInput(session, "samples", choices = names(obj@images))
 
     
 
@@ -83,8 +90,49 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
       )
     })
     
-    output$spatdim <- renderPlot({
-      SpatialDimPlot(obj, group.by = input$group_by)
+    # ---- Dynamic Spatial plots (one per checked sample) ----
+    # 1) Build UI placeholders for each selected sample
+    output$spatial_grid <- renderUI({
+      req(length(input$samples) > 0)
+      cards <- lapply(input$samples, function(s) {
+        out_id    <- paste0("sp_", safe_id(s))
+        slider_id <- paste0("pt_", safe_id(s))
+        card(
+          card_header(paste("Sample:", s)),
+          div(class = "px-3 py-2",
+              sliderInput(ns(slider_id), "Point size (spots)",
+                          min = 0.1, max = 4, value = 1.6, step = 0.1)
+          ),
+          plotOutput(ns(out_id), height = 380)
+        )
+      })
+      do.call(layout_columns, c(list(col_widths = rep(4, length(cards))), cards))
+    })
+
+     # 2) Attach renderers for each selected sample
+    observe({
+      # Re-wire outputs whenever the selection changes
+      req(length(input$samples) > 0)
+      lapply(input$samples, function(s) {
+        out_id <- paste0("sp_", safe_id(s))
+        slider_id <- paste0("pt_", safe_id(s))
+        # local() to capture `s` correctly inside the loop
+        local({
+          s_local <- s
+          out_local <- out_id
+          slider_local <- slider_id
+          output[[out_local]] <- renderPlot({
+            size_val <- input[[slider_local]]
+            grp <- if (!is.null(input$group_by)) input$group_by else NULL
+            SpatialDimPlot(
+              obj,
+              images = s_local,         # <-- one plot per sample
+              group.by = grp,
+              pt.size.factor = size_val
+            )
+          })
+        })
+      })
     })
 
 
