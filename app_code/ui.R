@@ -20,7 +20,7 @@ library(shinyjs)
 source("setup.R")
 
 ## Source UI modules
-source("modules/spatial_ui.R")
+source("modules/spatial_unit.R")
 
 
 # Feature plot of queried genes
@@ -283,7 +283,7 @@ ui <- page_navbar(
   
   nav_panel("Spatial data explorer",
 value = "spatial",
-spatial_UI("sp")),
+spatial_UI("sp1")),
   
   nav_spacer(),
   nav_panel(
