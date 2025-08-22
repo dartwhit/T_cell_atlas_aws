@@ -22,7 +22,7 @@ spatial_UI <- function(id) {
                   choices = c("Seurat cluster" = "cluster",
                   "Key regions" =  "Key_Regions"),
                 selected = "cluster"),
-      selectizeInput(ns("feature"), "Feature (Gene/pathway)",
+      selectizeInput(ns("feature"), "Feature (Gene/pathway)",multiple = TRUE,
       choices = NULL, options = list(placeholder = "Type to search…"))
     ),# End of sidebar
     # ----------- Right side --------------
@@ -36,7 +36,11 @@ spatial_UI <- function(id) {
         card_header("Feature plot"),
         plotOutput(ns("featureplot"))
       )
-    )
+    ),
+      card(
+        card_header("Spatial Dimplot"),
+        plotOutput(ns("spatdim"))
+      )
   )
 }
 
@@ -79,5 +83,10 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
       )
     })
     
+    output$spatdim <- renderPlot({
+      SpatialDimPlot(obj, group.by = input$group_by)
+    })
+
+
   })
 }
