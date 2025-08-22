@@ -19,6 +19,9 @@ library(periscope2)
 library(shinyjs)
 source("setup.R")
 
+## Source UI modules
+source("modules/spatial_ui.R")
+
 
 # Feature plot of queried genes
 card_feature <-card("Featureplot of selected genes",
@@ -278,7 +281,9 @@ ui <- page_navbar(
             ),
   ),
   
-  
+  nav_panel("Spatial data explorer",
+value = "spatial",
+spatial_UI("sp")),
   
   nav_spacer(),
   nav_panel(
