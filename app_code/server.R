@@ -604,7 +604,7 @@ server <- function(input, output,session) {
         # Show a violin plot for <= 3 features
         VlnPlot(curr_obj, 
                 features = feature_names, 
-                # assay = "SCT",
+                assay = "SCT",
                 split.by = "Disease", 
                 split.plot = TRUE)
       } else {
