@@ -56,7 +56,6 @@ jobs:
               -p 3839:3838 \
               -e SHINY_LOG_STDERR=1 \
               -v /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro \
-              -v /home/ubuntu/atlas/prod_cache:/srv/shiny-server/atlas/app_cache \
               -v /home/ubuntu/atlas/logs/prod:/var/log/shiny-server \
               atlas:prod
 
