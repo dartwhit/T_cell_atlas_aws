@@ -1,5 +1,8 @@
+library(bslib)
+library(shiny)
 # ---- Test App ----
-test_ui <- fluidPage(
+test_ui <- bslib::page_fluid(
+  theme = bs_theme(bootswatch = "flatly"),
   h3("Spatial module test"),
   spatial_UI("sp1")
 )
