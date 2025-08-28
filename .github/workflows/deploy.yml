@@ -1,6 +1,12 @@
 name: Deploy to EC2
 
 on:
+  workflow_dispatch:
+          inputs:
+            my_input:
+              description: 'A custom input'
+              required: false
+              type: string
   push:
     branches: [ main ]
     paths:
