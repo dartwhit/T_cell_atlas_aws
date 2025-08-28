@@ -45,9 +45,13 @@ spatial_UI <- function(id) {
     card(
       card_header("Spatial Dimplots"),
       uiOutput(ns("spatial_grid"))
-    )
+    ),
+     # Dynamic UI for spatial featureplots (one per checked sample)
+     card(
+      card_header("Spatial Featureplots"),
+      uiOutput(ns("spatial_feature_grid"))
   )
-}
+)}
 
 # ---------- MODULE SERVER ----------
 # You can pass a ready Seurat object via `spat_obj`,
@@ -136,5 +140,49 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
     })
 
 
+    # ---- Dynamic Spatial Feature plots (one per checked sample) ----
+    # 1) Build UI placeholders for each selected sample
+    output$spatial_feature_grid <- renderUI({
+      req(length(input$samples) > 0, input$feature)
+      cards <- lapply(input$samples, function(s) {
+        out_id    <- paste0("spfeat_", safe_id(s))
+        slider_id <- paste0("ptfeat_", safe_id(s))
+        card(
+          card_header(paste("Sample:", s)),
+          div(class = "px-3 py-2",
+              sliderInput(ns(slider_id), "Point size (spots)",
+                          min = 0.1, max = 4, value = 1.6, step = 0.1)
+          ),
+          plotOutput(ns(out_id), height = 380)
+        )
+      })
+      do.call(layout_columns, c(list(col_widths = rep(4, length(cards))), cards))
+    })
+
+     # 2) Attach renderers for each selected sample
+    observe({
+      # Re-wire outputs whenever the selection changes
+      req(length(input$samples) > 0, input$feature)
+      lapply(input$samples, function(s) {
+        out_id <- paste0("spfeat_", safe_id(s))
+        slider_id <- paste0("ptfeat_", safe_id(s))
+        # local() to capture `s` correctly inside the loop
+        local({
+          s_local <- s
+          out_local <- out_id
+          slider_local <- slider_id
+          output[[out_local]] <- renderPlot({
+            size_val <- input[[slider_local]]
+            DefaultAssay(obj) <- "SCT"
+            SpatialFeaturePlot(
+              obj,
+              images = s_local,         # <-- one plot per sample
+              features = input$feature,
+              pt.size.factor = size_val
+            )
+          })
+        })
+      })
   })
 }
+  )}
