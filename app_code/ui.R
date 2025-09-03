@@ -21,6 +21,8 @@ source("setup.R")
 
 ## Source UI modules
 source("modules/spatial_unit.R")
+source("modules/dataset_gallery_module.R")
+source("modules/explore_sidebar_module.R")
 
 
 # Feature plot of queried genes
@@ -144,20 +146,7 @@ ui <- page_navbar(
   # ),
     nav_panel(
     "Datasets",
-    layout_sidebar(
-      sidebar = sidebar(
-        textInput("search", "Search"),
-        selectInput("assay", "Assay", choices = c("All", unique(dataset_meta$assay)))
-        # sliderInput(
-        #   "cell_count",
-        #   "Cell count",
-        #   min = 0,
-        #   max = max(dataset_meta$n_cells),
-        #   value = c(0, max(dataset_meta$n_cells))
-        # )
-      ),
-      uiOutput("gallery")
-    )
+    dataset_gallery_UI("gallery_module")
   ),
   
   
@@ -165,97 +154,7 @@ ui <- page_navbar(
   # Explore page
     nav_panel("Explore",
             layout_sidebar(
-              sidebar = sidebar(
-                title = "Select dataset and genes",
-                position = "left",
-                selectInput("study","Select study to explore",
-                            choices = c(
-                              "TMKMH" = "tmkmh",
-                              "Tabib et al." = "tabib",
-                              "Gur et al." = "gur",
-                              "Ma et al." = "ma",
-                              "Khanna et al" = "khanna"
-                            )),
-
-                
-                conditionalPanel(
-                  condition="input.data_level == 'full'",
-                  switchInput("anno",
-                              "Original seurat clusters",
-                              value = FALSE)
-                ),
-                # Select object to visualize
-                # selectInput("data_level","Select data to visualize",
-                #             choices = c("Full" = "full",
-                #                         "Fibroblasts" = "fib",
-                #                         "Immune cells" = "immune",
-                #                         "Myeloid cells" = "mye")),
-                
-                # Data level selection
-                uiOutput("data_level_ui"),
-                actionBttn(
-                  "load_btn","Load Data"
-                ),
-                
-                # Content to be hidden
-                hidden(
-                  div(id = "hidden_menu",
-
-                      # Select to visualize genes or pathways
-                      awesomeRadio("feature_type",
-                                   "Select a type of features to visualize",
-                                   choices = c("Genes", "Pathways"),
-                                   selected = "Genes"
-                                   
-                      ),
-                      ##### Branch based on selected feature type
-                      # -------- Gene mode --------
-                      conditionalPanel(
-                        condition = "input.feature_type == 'Genes'",
-                        # Load gene list
-                        checkboxInput("use_textinput", "Use my own gene list", value = FALSE),
-                        
-                        conditionalPanel(
-                          condition = "input.use_textinput == 0",
-                          selectizeInput("gene_select","Select a gene", choices = NULL, multiple = TRUE)
-                        ),
-                        
-                        conditionalPanel(
-                          condition = "input.use_textinput == 1",
-                          textAreaInput("gene_input", "Paste gene list:")
-                        )
-                      ),
-                      # --------- Pathway mode ------
-                      conditionalPanel(
-                        condition = "input.feature_type == 'Pathways'",
-                        # Load gene list
-                        
-                        # # Load pathway list according to pathway categories
-                        # checkboxGroupButtons("pathway_cat","Pathway category",
-                        #                      choices = c("Hallmark","Reactome")),
-                        
-                        ### Subset: rownames(fibs@assays$VAMcdf) to get a specific category of pathways
-                        checkboxInput("use_textinput_VAM", "Add my own gene set", value = FALSE),
-                        selectInput("pathway_select"," Select pathways", choices = NULL, multiple = TRUE),
-                        conditionalPanel(
-                          condition = "input.use_textinput_VAM ==1",
-                          textInput("geneset_name","Name of your gene set"),
-                          textAreaInput("VAM_geneset", "Please paste a list of genes for VAM"),
-                          actionBttn("submit_geneset","Add geneset")
-                        )
-                      )
-                      
-                      )# End of div
-                ),
-                
-
-                
-
-
-                
-              
-                
-              ),
+              sidebar = explore_sidebar_UI("explore_sidebar_module"),
               navset_tab(
                 id = "explore_tabs",
                 nav_panel(title = "Plots",
