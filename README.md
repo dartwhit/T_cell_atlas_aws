@@ -6,7 +6,6 @@ This project is a web-based application for exploring single-cell and spatial tr
 
 The application is hosted on AWS and can be accessed [here](http://3.16.156.124/atlas/ ):
 
-*(Note: Please replace the placeholder URL with the actual URL of your hosted application.)*
 
 ## 🚀 Features
 
