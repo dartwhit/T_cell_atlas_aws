@@ -35,9 +35,9 @@ jobs:
 
             echo "🔐 Setting permissions for mounted volumes..."
             mkdir -p /home/ubuntu/atlas/dev_cache
-            sudo chown -R 999:999 /home/ubuntu/atlas/dev_cache
+            sudo chmod 777 /home/ubuntu/atlas/dev_cache
             mkdir -p /home/ubuntu/atlas/logs/dev
-            sudo chown -R 999:999 /home/ubuntu/atlas/logs/dev
+            sudo chmod 777 /home/ubuntu/atlas/logs/dev
 
             echo "🧹 Removing existing DEV container (if any)..."
             docker rm -f atlas-dev || true

@@ -204,7 +204,7 @@ server <- function(input, output,session) {
     
     req(DEG_path())
     print(paste("Loading DEGs from", DEG_path()))
-    deg_df <- if (grepl("\.csv$", DEG_path())) {
+     deg_df <- if (endsWith(DEG_path(), ".csv")) {
       read.csv(DEG_path())
     } else {
       read.delim(DEG_path(), sep = "\t")
@@ -286,7 +286,7 @@ server <- function(input, output,session) {
     req(DEG_path())
     
     print(paste("Reloading DEGs from", DEG_path()))
-    deg_df <- if (grepl("\.csv$", DEG_path())) {
+     deg_df <- if (endsWith(DEG_path(), ".csv")) {
       read.csv(DEG_path())
     } else {
       read.delim(DEG_path(), sep = "\t")
