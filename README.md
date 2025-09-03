@@ -1,4 +1,4 @@
-# T-cell Atlas AWS
+# SSc skin cell Atlas
 
 This project is a web-based application for exploring single-cell and spatial transcriptomics data related to Systemic Sclerosis (SSc). It's a Shiny app written in R, designed to be hosted on AWS.
 
