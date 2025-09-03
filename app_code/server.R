@@ -11,6 +11,7 @@ library(shinyjs)
 source("setup.R")
 source("modules/dataset_gallery_module.R")
 source("modules/explore_sidebar_module.R")
+source("modules/spatial_unit.R")
 
 options(shiny.trace = TRUE)
 
