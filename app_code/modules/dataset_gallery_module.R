@@ -55,9 +55,17 @@ dataset_gallery_server <- function(id) {
       div(class = "dataset-gallery", cards)
     })
 
-    # Return the reactive expression that triggers navigation
-    return(
-      reactive(input)
-    )
+    # Create a reactive value to store the selected study
+    selected_study <- reactiveVal(NULL)
+
+    # Observe the button clicks
+    lapply(dataset_meta$id, function(id) {
+      observeEvent(input[[paste0("explore_", id)]], {
+        selected_study(id)
+      })
+    })
+
+    # Return the reactive value
+    return(selected_study)
   })
 }

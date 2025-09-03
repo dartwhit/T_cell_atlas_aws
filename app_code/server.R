@@ -30,20 +30,12 @@ server <- function(input, output,session) {
   options(shiny.trace = FALSE, shiny.fullstacktrace = FALSE, shiny.sanitize.errors = TRUE)
 
   # ########################## Dataset gallery #######################
-  gallery_inputs <- dataset_gallery_server("gallery_module")
+  selected_study_from_gallery <- dataset_gallery_server("gallery_module")
 
-  observe({
-    gallery_input <- gallery_inputs()
-    lapply(dataset_meta$id, function(id) {
-      button_name <- paste0("explore_", id)
-      if (!is.null(gallery_input[[button_name]]) && gallery_input[[button_name]] > 0) {
-        updateSelectInput(session, "study", selected = id)
-      }
-    })
-  })
-
-  observeEvent(input$study, {
-    req(input$study)
+  observeEvent(selected_study_from_gallery(), {
+    study_id <- selected_study_from_gallery()
+    req(study_id)
+    updateSelectInput(session, "study", selected = study_id)
     nav_select("nav_page", selected = "Explore")
   }, ignoreInit = TRUE)
 
