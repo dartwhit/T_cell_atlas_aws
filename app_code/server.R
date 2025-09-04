@@ -108,10 +108,6 @@ server <- function(input, output,session) {
 
   ################################## Explore page #################################
   
-
-  
-  sidebar_inputs <- explore_sidebar_server("explore_sidebar_module")
-  
   
   reset_trigger <- reactiveVal(FALSE)
   # seurat object to use
@@ -188,7 +184,7 @@ server <- function(input, output,session) {
     
     req(sidebar_inputs$study(), sidebar_inputs$data_level())
     
-    shinyjs::show("hidden_menu")
+    shinyjs::show(selector = "#explore_sidebar_module-hidden_menu")
     
     ################## get files paths of the selected dataset #############
     seurat_path <- paste0(inDir,dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["seurat"]])
