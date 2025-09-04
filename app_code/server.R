@@ -561,9 +561,10 @@ server <- function(input, output,session) {
       # Show default dot plot or violin plot
       if (length(feature_names) <= 3) {
         # Show a violin plot for <= 3 features
+        assay_to_use <- if ("SCT" %in% Assays(curr_obj)) "SCT" else "RNA"
         VlnPlot(curr_obj, 
                 features = feature_names, 
-                assay = "SCT",
+                assay = assay_to_use,
                 split.by = "Disease", 
                 split.plot = TRUE)
       } else {
@@ -734,7 +735,7 @@ server <- function(input, output,session) {
     updateAwesomeRadio(session,"feature_type", selected = feature_type_selected)
     
     
-    input_id <- ifelse(feature_type_selected == "Genes", "gene_select", "pathway_select") # Get correct input id for genes and pathways
+    input_id <- if (feature_type_selected == "Genes") "explore_sidebar_module-gene_select" else "explore_sidebar_module-pathway_select"
     if (feature_type_selected == "Genes") {
       choices <- gene_list_obj()
     } else {
@@ -771,6 +772,10 @@ server <- function(input, output,session) {
   
   output$meta_data_msg <- renderText({
     "Metadata not available for the selected dataset."
+  })
+
+
+}ta not available for the selected dataset."
   })
 
 
