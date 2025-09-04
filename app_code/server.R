@@ -213,8 +213,9 @@ server <- function(input, output,session) {
     gene_list_obj(readRDS(gene_list_path))
     
     vam_names <- rownames(seurat_obj()@assays$VAMcdf)
-    vam_names <- str_remove(vam_names,"HALLMARK-")
-    pathway_list(vam_names)
+    pathway_names_for_display <- str_remove(vam_names,"HALLMARK-")
+    pathway_choices <- setNames(vam_names, pathway_names_for_display)
+    pathway_list(pathway_choices)
     
     
     # Try loading metadata,
@@ -419,8 +420,13 @@ server <- function(input, output,session) {
       
       # Update seurat object
       seurat_obj(curr_obj)
-      pathway_list(rownames(curr_obj@assays$VAMcdf))
-      updateSelectInput(session,"pathway_select", choices = pathway_list())
+      
+      vam_names <- rownames(curr_obj@assays$VAMcdf)
+      pathway_names_for_display <- str_remove(vam_names,"HALLMARK-")
+      pathway_choices <- setNames(vam_names, pathway_names_for_display)
+      pathway_list(pathway_choices)
+      
+      updateSelectInput(session,"explore_sidebar_module-pathway_select", choices = pathway_list(), selected = new_geneset_name)
     }
   })
   
@@ -738,8 +744,11 @@ server <- function(input, output,session) {
     input_id <- if (feature_type_selected == "Genes") "explore_sidebar_module-gene_select" else "explore_sidebar_module-pathway_select"
     if (feature_type_selected == "Genes") {
       choices <- gene_list_obj()
+      selected_value <- as.character(new_gene_queried())
     } else {
       choices <- pathway_list()
+      selected_name <- as.character(new_gene_queried())
+      selected_value <- choices[names(choices) == selected_name]
     }
     
     if (is.null(choices)) {
@@ -749,7 +758,7 @@ server <- function(input, output,session) {
     updateSelectizeInput(session,
                          # "gene_select",
                          input_id,
-                         selected = as.character(new_gene_queried()),
+                         selected = selected_value,
                          choices = choices,
                          server = TRUE
     )
