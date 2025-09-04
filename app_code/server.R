@@ -214,7 +214,7 @@ server <- function(input, output,session) {
     
     vam_names <- rownames(seurat_obj()@assays$VAMcdf)
     vam_names <- str_remove(vam_names,"HALLMARK-")
-    pathway_list()
+    pathway_list(vam_names)
     
     
     # Try loading metadata,
@@ -259,10 +259,8 @@ server <- function(input, output,session) {
     # update gene, pathway and cell type list
     # cell_clusters(levels(as.factor(data$cluster)))
     
-    updateSelectizeInput(session, "gene_select", choices = gene_list_obj(), server = TRUE)
-    updateSelectInput(session,"pathway_select", choices = rownames(seurat_obj()@assays$VAMdist))
-    # updateSelectInput(session, "cell_cluster", choices = cell_clusters())
-    updateSelectInput(session,"pathway_select", choices = pathway_list())
+    updateSelectizeInput(session, "explore_sidebar_module-gene_select", choices = gene_list_obj(), server = TRUE)
+    updateSelectInput(session,"explore_sidebar_module-pathway_select", choices = pathway_list())
     
     
     print(paste("Loaded",sidebar_inputs$data_level(),"from dataset:", sidebar_inputs$study()))  
