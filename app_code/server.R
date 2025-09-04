@@ -775,8 +775,4 @@ server <- function(input, output,session) {
   })
 
 
-}ta not available for the selected dataset."
-  })
-
-
 }
