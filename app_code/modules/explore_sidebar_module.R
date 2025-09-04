@@ -78,7 +78,7 @@ explore_sidebar_UI <- function(id) {
 }
 
 # ---------- MODULE SERVER ----------
-explore_sidebar_server <- function(id) {
+explore_sidebar_server <- function(id, selected_study_from_gallery) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
@@ -86,6 +86,10 @@ explore_sidebar_server <- function(id) {
       selectInput(ns("data_level"),
                   "Select data to visualize",
                   choices = data_level_choices[[input$study]])
+    })
+
+    observeEvent(selected_study_from_gallery(), {
+      updateSelectInput(session, "study", selected = selected_study_from_gallery())
     })
 
     return(

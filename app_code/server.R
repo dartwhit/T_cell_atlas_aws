@@ -29,13 +29,13 @@ server <- function(input, output,session) {
 
   options(shiny.trace = FALSE, shiny.fullstacktrace = FALSE, shiny.sanitize.errors = TRUE)
 
-  # ########################## Dataset gallery #######################
   selected_study_from_gallery <- dataset_gallery_server("gallery_module")
 
+  sidebar_inputs <- explore_sidebar_server("explore_sidebar_module", 
+                                           selected_study_from_gallery = selected_study_from_gallery)
+
   observeEvent(selected_study_from_gallery(), {
-    study_id <- selected_study_from_gallery()
-    req(study_id)
-    updateSelectInput(session, "study", selected = study_id)
+    req(selected_study_from_gallery())
     nav_select("nav_page", selected = "Explore")
   }, ignoreInit = TRUE)
 
@@ -212,6 +212,7 @@ server <- function(input, output,session) {
 
     ################## Load data ##################
     # Seurat object and gene lists
+    print(seurat_path)
     seurat_obj(readRDS(seurat_path))
     gene_list_obj(readRDS(gene_list_path))
     
@@ -272,7 +273,7 @@ server <- function(input, output,session) {
     showNotification(paste("Loading data for study:", sidebar_inputs$study(), 
                            "and data level:", sidebar_inputs$data_level()), type = "message")
 
-  })
+    })
   
   observeEvent(input$by_disease, {
     req(sidebar_inputs$load_btn() > 0)
