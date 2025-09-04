@@ -9,6 +9,8 @@ dataset_meta <- read.delim(
   sep = "\t",
   stringsAsFactors = FALSE
 )
+dataset_meta$has_scrna <- as.logical(dataset_meta$has_scrna)
+dataset_meta$has_spatial <- as.logical(dataset_meta$has_spatial)
 
 # Minimal mapping of dataset ids to available files
 
