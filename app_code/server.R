@@ -292,13 +292,24 @@ server <- function(input, output,session) {
     invalidateLater(0, session)
     reset_trigger(FALSE)
     
+    # Hide the sidebar options
+    shinyjs::hide(selector = "#explore_sidebar_module-hidden_menu")
+    
+    # Reset reactive values
+    seurat_obj(NULL)
+    gene_list_obj(NULL)
+    VAM_df(NULL)
+    DEGs_df(NULL)
+    cell_clusters(NULL)
+    pathway_list(NULL)
+    meta_df(NULL)
+    
     #Clear gene/pathway input fields
-    updateSelectizeInput(session, "gene_select", choices = NULL, selected = character(0))
-    updateTextInput(session, "gene_input",value = "")
+    updateSelectizeInput(session, "explore_sidebar_module-gene_select", choices = NULL, selected = character(0))
+    updateTextInput(session, "explore_sidebar_module-gene_input",value = "")
     
     
-    updateSelectInput(session, "pathway_select", choices = NULL, selected = character(0))
-    updateTextInput(session, "pathway_input", value = "")
+    updateSelectInput(session, "explore_sidebar_module-pathway_select", choices = NULL, selected = character(0))
     
     
     updateSelectInput(session, "cell_cluster", choices = NULL, selected = character(0))
