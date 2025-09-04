@@ -40,7 +40,15 @@ dataset_gallery_server <- function(id) {
       }
       cards <- lapply(seq_len(nrow(data)), function(i) {
         row <- data[i, ]
-        badges <- lapply(c(row$assay, strsplit(row$tags, ",")[[1]]), function(tg) {
+        data_types <- c()
+        if (row$has_scrna) {
+          data_types <- c(data_types, "scRNA-seq")
+        }
+        if (row$has_spatial) {
+          data_types <- c(data_types, "Spatial")
+        }
+        
+        badges <- lapply(c(row$assay, strsplit(row$tags, ",")[[1]], data_types), function(tg) {
           tags$span(class = "badge", tg)
         })
         tags$div(
