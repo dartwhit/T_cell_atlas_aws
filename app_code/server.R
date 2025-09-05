@@ -587,7 +587,9 @@ server <- function(input, output,session) {
                 features = feature_names, 
                 assay = assay_to_use,
                 split.by = "Disease", 
-                split.plot = TRUE)
+                split.plot = TRUE,
+                pt.size = 0,
+                cols = c("HC" = "#cb07a4ff", "SSc" = "#09b646ff"))
       } else {
         # Show a dot plot for > 3 features by default
         DotPlot(curr_obj, 
