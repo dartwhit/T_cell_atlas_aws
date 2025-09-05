@@ -8,6 +8,7 @@ library(dplyr)
 library(stringr)
 library(VAM)
 library(shinyjs)
+library(tidyr)
 source("setup.R")
 source("modules/dataset_gallery_module.R")
 source("modules/explore_sidebar_module.R")
@@ -18,13 +19,25 @@ options(shiny.trace = TRUE)
 
 # Define server logic required to draw a histogram
 server <- function(input, output,session) {
+  # Get studies with spatial data
+  studies_with_spatial <- reactive({
+    names(dataset_files)[sapply(dataset_files, function(x) !is.null(x$spatial_seurat))]
+  })
+  
+  # Update the spatial study selector
+  observe({
+    updateSelectInput(session, "spatial_study_selector", choices = studies_with_spatial())
+  })
+  
+  # Get the path to the selected spatial data
+  spatial_data_path <- reactive({
+    req(input$spatial_study_selector)
+    paste0(inDir, dataset_files[[input$spatial_study_selector]][["spatial_seurat"]])
+  })
+
   spatial_server(
     id = "sp1",
-    # Option A: pass a path for quick testing
-    rds_path = "data/2025-07-07_MaSSc_Visium_PRECAST_SingleCellPredicted_RegionsNamed_CARD.rds"
-
-    # Option B (faster at runtime): load once globally and pass `spat_obj = ...`
-    # spat_obj = my_spatial  # if you did: my_spatial <- readRDS("...rds")
+    rds_path = spatial_data_path()
   )
 
   options(shiny.trace = FALSE, shiny.fullstacktrace = FALSE, shiny.sanitize.errors = TRUE)

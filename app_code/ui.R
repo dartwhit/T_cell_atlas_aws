@@ -182,12 +182,15 @@ ui <- page_navbar(
   ),
   
   nav_panel("Spatial data explorer",
-value = "spatial",
-bslib::page_fluid(
-  # theme = bs_theme(bootswatch = "flatly"),
-  h3("Spatial module test"),
-  spatial_UI("sp1")
-)
+    value = "spatial",
+    layout_sidebar(
+      sidebar = sidebar(
+        selectInput("spatial_study_selector", "Select Study", choices = NULL)
+      ),
+      mainPanel(
+        spatial_UI("sp1")
+      )
+    )
   ),
   
   nav_spacer(),
