@@ -51,6 +51,7 @@ card_gene_plot <-card("Plot of selected genes",
                             conditionalPanel("output.show_switch == true",
                                              switchInput("heatmap","Show heatmap")
                                              ),
+                            switchInput("plot_type", "Plot Type", value = TRUE, onLabel = "Vln", offLabel = "Box"),
                             
                             withSpinner(
                               

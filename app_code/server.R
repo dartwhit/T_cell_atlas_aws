@@ -578,18 +578,36 @@ server <- function(input, output,session) {
       # Show default dot plot or violin plot
       if (length(feature_names) <= 3) {
         # Show a violin plot for <= 3 features
-        assay_to_use <- if (f_type == "Genes") {
-          if ("SCT" %in% Assays(curr_obj)) "SCT" else "RNA"
-        } else {
-          "VAMcdf"
+        if (is.null(input$plot_type) || input$plot_type) { # Default to VlnPlot
+          assay_to_use <- if (f_type == "Genes") {
+            if ("SCT" %in% Assays(curr_obj)) "SCT" else "RNA"
+          } else {
+            "VAMcdf"
+          }
+          VlnPlot(curr_obj, 
+                  features = feature_names, 
+                  assay = assay_to_use,
+                  split.by = "Disease", 
+                  split.plot = TRUE,
+                  pt.size = 0,
+                  cols = c("HC" = "#cb07a4ff", "SSc" = "#09b646ff"))
+        } else { # BoxPlot
+          assay_to_use <- if (f_type == "Genes") {
+            if ("SCT" %in% Assays(curr_obj)) "SCT" else "RNA"
+          } else {
+            "VAMcdf"
+          }
+          
+          plot_data <- FetchData(curr_obj, vars = c(feature_names, "Disease"), assay = assay_to_use) %>%
+            pivot_longer(cols = -Disease, names_to = "feature", values_to = "expression")
+          
+          ggplot(plot_data, aes(x = Disease, y = expression, fill = Disease)) +
+            geom_boxplot(outlier.shape = NA) +
+            scale_fill_manual(values = c("HC" = "#cb07a4ff", "SSc" = "#09b646ff")) +
+            facet_wrap(~feature, scales = "free_y") +
+            theme_classic() +
+            theme(axis.text.x = element_text(angle = 45, hjust = 1))
         }
-        VlnPlot(curr_obj, 
-                features = feature_names, 
-                assay = assay_to_use,
-                split.by = "Disease", 
-                split.plot = TRUE,
-                pt.size = 0,
-                cols = c("HC" = "#cb07a4ff", "SSc" = "#09b646ff"))
       } else {
         # Show a dot plot for > 3 features by default
         DotPlot(curr_obj, 
