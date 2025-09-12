@@ -17,21 +17,10 @@ spatial_UI <- function(id) {
         plotOutput(ns("featureplot"),height=380)
       )
     ),
-    # Dynamic grid of spatial plots (one per checked sample)
+    # Sample-centric grid of plots
     conditionalPanel(
       condition = paste0("input['", ns("samples"), "'] && input['", ns("samples"), "'].length > 0"),
-      card(
-        card_header("Spatial Dimplots"),
-        uiOutput(ns("spatial_grid"))
-      )
-    ),
-     # Dynamic UI for spatial featureplots (one per checked sample)
-    conditionalPanel(
-      condition = paste0("input['", ns("samples"), "'] && input['", ns("samples"), "'].length > 0 && input['", ns("feature"), "']"),
-      card(
-        card_header("Spatial Featureplots"),
-        uiOutput(ns("spatial_feature_grid"))
-      )
+      uiOutput(ns("sample_centric_grid"))
     )
   )
 }
@@ -53,6 +42,24 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
     })
 
     safe_id <- function(x) gsub("[^A-Za-z0-9_]", "_", x)
+
+    default_pt_sizes <- reactive({
+      req(obj())
+      sapply(names(obj()@images), function(s) {
+        coords <- obj()@images[[s]]@coordinates
+        if (nrow(coords) < 2) return(1.6) # Default if less than 2 spots
+        dists <- as.matrix(dist(coords))
+        diag(dists) <- Inf # Set distance to self to Inf
+        min_dists <- apply(dists, 1, min)
+        d_mean <- mean(min_dists)
+        spot_radius <- obj()@images[[s]]@spot.radius
+        scale_factor <- obj()@images[[s]]@scale.factors$spot
+        
+        # Set diameter to be a fraction of the mean distance.
+        pt_size_factor <- (0.1 * d_mean) / (2 * spot_radius * scale_factor)
+        pt_size_factor
+      })
+    })
 
     observe({
       req(obj())
@@ -81,96 +88,85 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
       )
     })
     
-    # ---- Dynamic Spatial plots (one per checked sample) ----
-    # 1) Build UI placeholders for each selected sample
-    output$spatial_grid <- renderUI({
+    # ---- Sample-centric dynamic grid ----
+    output$sample_centric_grid <- renderUI({
       req(length(input$samples) > 0)
+      
       cards <- lapply(input$samples, function(s) {
-        out_id    <- paste0("sp_", safe_id(s))
-        slider_id <- paste0("pt_", safe_id(s))
+        safe_s <- safe_id(s)
+        slider_id <- paste0("pt_", safe_s)
+        dimplot_id <- paste0("sp_dim_", safe_s)
+        featureplot_id <- paste0("sp_feat_", safe_s)
+        
         card(
           card_header(paste("Sample:", s)),
           div(class = "px-3 py-2",
-              sliderInput(ns(slider_id), "Point size (spots)",
-                          min = 0.1, max = 4, value = 1.6, step = 0.1)
+              sliderInput(ns(slider_id), "Relative point size",
+                          min = 0.2, max = 1.5, value = 1, step = 0.1)
           ),
-          plotOutput(ns(out_id), height = 380)
+          layout_columns(
+            col_widths = c(6, 6),
+            plotOutput(ns(dimplot_id), height = 380),
+            conditionalPanel(
+              condition = paste0("input['", ns("feature"), "'] && input['", ns("feature"), "'].length > 0"),
+              plotOutput(ns(featureplot_id), height = 380)
+            )
+          )
         )
       })
-      do.call(layout_columns, c(list(col_widths = rep(4, length(cards))), cards))
+      
+      do.call(layout_columns, c(list(col_widths = rep(6, length(cards))), cards))
     })
-
-     # 2) Attach renderers for each selected sample
+    
     observe({
-      # Re-wire outputs whenever the selection changes
-      req(length(input$samples) > 0, obj())
+      req(length(input$samples) > 0, default_pt_sizes())
+      
       lapply(input$samples, function(s) {
-        out_id <- paste0("sp_", safe_id(s))
-        slider_id <- paste0("pt_", safe_id(s))
-        # local() to capture `s` correctly inside the loop
+        safe_s <- safe_id(s)
+        slider_id <- paste0("pt_", safe_s)
+        dimplot_id <- paste0("sp_dim_", safe_s)
+        featureplot_id <- paste0("sp_feat_", safe_s)
+        
         local({
           s_local <- s
-          out_local <- out_id
-          slider_local <- slider_id
-          output[[out_local]] <- renderPlot({
-            size_val <- input[[slider_local]]
+          
+          # Render SpatialDimPlot
+          output[[dimplot_id]] <- renderPlot({
+            size_val_multiplier <- input[[slider_id]]
+            if (is.null(size_val_multiplier)) size_val_multiplier <- 1.0
+            
+            default_size <- default_pt_sizes()[s_local]
+            final_size <- default_size * size_val_multiplier
+            
             grp <- if (!is.null(input$group_by)) input$group_by else NULL
             SpatialDimPlot(
               obj(),
-              images = s_local,         # <-- one plot per sample
+              images = s_local,
               group.by = grp,
-              pt.size.factor = size_val
+              pt.size.factor = final_size
             )
           })
-        })
-      })
-    })
-
-
-    # ---- Dynamic Spatial Feature plots (one per checked sample) ----
-    # 1) Build UI placeholders for each selected sample
-    output$spatial_feature_grid <- renderUI({
-      req(length(input$samples) > 0, input$feature)
-      cards <- lapply(input$samples, function(s) {
-        out_id    <- paste0("spfeat_", safe_id(s))
-        slider_id <- paste0("ptfeat_", safe_id(s))
-        card(
-          card_header(paste("Sample:", s)),
-          div(class = "px-3 py-2",
-              sliderInput(ns(slider_id), "Point size (spots)",
-                          min = 0.1, max = 4, value = 1.6, step = 0.1)
-          ),
-          plotOutput(ns(out_id), height = 380)
-        )
-      })
-      do.call(layout_columns, c(list(col_widths = rep(4, length(cards))), cards))
-    })
-
-     # 2) Attach renderers for each selected sample
-    observe({
-      # Re-wire outputs whenever the selection changes
-      req(length(input$samples) > 0, input$feature, obj())
-      lapply(input$samples, function(s) {
-        out_id <- paste0("spfeat_", safe_id(s))
-        slider_id <- paste0("ptfeat_", safe_id(s))
-        # local() to capture `s` correctly inside the loop
-        local({
-          s_local <- s
-          out_local <- out_id
-          slider_local <- slider_id
-          output[[out_local]] <- renderPlot({
-            size_val <- input[[slider_local]]
+          
+          # Render SpatialFeaturePlot
+          output[[featureplot_id]] <- renderPlot({
+            req(input$feature)
+            size_val_multiplier <- input[[slider_id]]
+            if (is.null(size_val_multiplier)) size_val_multiplier <- 1.0
+            
+            default_size <- default_pt_sizes()[s_local]
+            final_size <- default_size * size_val_multiplier
+            
             plot_obj <- obj()
             DefaultAssay(plot_obj) <- "SCT"
             SpatialFeaturePlot(
               plot_obj,
-              images = s_local,         # <-- one plot per sample
+              images = s_local,
               features = input$feature,
-              pt.size.factor = size_val
+              pt.size.factor = final_size
             )
           })
         })
       })
+    })
   })
 }
-  )}
