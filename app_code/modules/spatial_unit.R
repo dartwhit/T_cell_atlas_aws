@@ -90,9 +90,10 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
 
     output$featureplot <- renderPlot({
       req(obj(), input$feature)
-      DefaultAssay(obj()) <- "SCT"
+      plot_obj <- obj()
+      DefaultAssay(plot_obj) <- "SCT"
       FeaturePlot(
-        obj(), features = input$feature,
+        plot_obj, features = input$feature,
         reduction = redn()
       )
     })
@@ -176,9 +177,10 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
           slider_local <- slider_id
           output[[out_local]] <- renderPlot({
             size_val <- input[[slider_local]]
-            DefaultAssay(obj()) <- "SCT"
+            plot_obj <- obj()
+            DefaultAssay(plot_obj) <- "SCT"
             SpatialFeaturePlot(
-              obj(),
+              plot_obj,
               images = s_local,         # <-- one plot per sample
               features = input$feature,
               pt.size.factor = size_val
