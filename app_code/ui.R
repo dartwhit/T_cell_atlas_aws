@@ -183,6 +183,7 @@ ui <- page_navbar(
   
   nav_panel("Spatial data explorer",
     value = "spatial",
+    bslib::page_fluid(
     layout_sidebar(
       sidebar = sidebar(
         title = "Spatial data options",
@@ -200,6 +201,8 @@ ui <- page_navbar(
       ),
       spatial_UI("sp1")
     )
+    )
+
   ),
   
   nav_spacer(),
