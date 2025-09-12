@@ -5,31 +5,7 @@ library(Seurat)
 # ---------- MODULE UI ----------
 spatial_UI <- function(id) {
   ns <- NS(id)
-  plotOutput(ns("umap"), height = 500)
-  layout_sidebar(
-    sidebar = sidebar(
-      id = ns("side"),
-      title = "Spatial data options",
-      open = TRUE,
-      # div(
-      #   class = "d-flex gap-2",
-      #   # sidebar_toggle(ns("side"), label = "Toggle sidebar"),
-      #   actionButton(ns("reset"),"Reset")
-      # ),
-      # tags$hr(),
-      selectInput(ns("group_by"), 
-                  "Group by (metadata)", 
-                  choices = c("Seurat cluster" = "cluster",
-                  "Key regions" =  "Key_Regions"),
-                selected = "cluster"),
-      selectizeInput(ns("feature"), "Feature (Gene/pathway)",multiple = TRUE,
-      choices = NULL, options = list(placeholder = "Type to search…")),
-      # Select sampels to show
-      checkboxGroupInput(ns("samples"),
-                    "Select samples to view"
-                  )
-    ),# End of sidebar
-    # ----------- Right side --------------
+  tagList(
     layout_columns(
       col_widths = c(6,6),
       card(
@@ -41,17 +17,24 @@ spatial_UI <- function(id) {
         plotOutput(ns("featureplot"),height=380)
       )
     ),
-      # Dynamic grid of spatial plots (one per checked sample)
-    card(
-      card_header("Spatial Dimplots"),
-      uiOutput(ns("spatial_grid"))
+    # Dynamic grid of spatial plots (one per checked sample)
+    conditionalPanel(
+      condition = paste0("input['", ns("samples"), "'] && input['", ns("samples"), "'].length > 0"),
+      card(
+        card_header("Spatial Dimplots"),
+        uiOutput(ns("spatial_grid"))
+      )
     ),
      # Dynamic UI for spatial featureplots (one per checked sample)
-     card(
-      card_header("Spatial Featureplots"),
-      uiOutput(ns("spatial_feature_grid"))
+    conditionalPanel(
+      condition = paste0("input['", ns("samples"), "'] && input['", ns("samples"), "'].length > 0 && input['", ns("feature"), "']"),
+      card(
+        card_header("Spatial Featureplots"),
+        uiOutput(ns("spatial_feature_grid"))
+      )
+    )
   )
-)}
+}
 
 # ---------- MODULE SERVER ----------
 # You can pass a ready Seurat object via `spat_obj`,
