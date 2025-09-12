@@ -60,36 +60,39 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
-    # Load object once if not provided
-    obj <- if (!is.null(spat_obj)) {
-      spat_obj
-    } else {
-      req(rds_path)
-      readRDS(rds_path)
-    }
+    obj <- reactive({
+      if (!is.null(spat_obj)) {
+        spat_obj
+      } else {
+        req(rds_path())
+        readRDS(rds_path())
+      }
+    })
 
     safe_id <- function(x) gsub("[^A-Za-z0-9_]", "_", x)
 
-    updateSelectizeInput(session, "feature", choices = rownames(obj[["SCT"]]), server = TRUE)
-    updateCheckboxGroupInput(session, "samples", choices = names(obj@images))
-
-    
+    observe({
+      req(obj())
+      updateSelectizeInput(session, "feature", choices = rownames(obj()[["SCT"]]), server = TRUE)
+      updateCheckboxGroupInput(session, "samples", choices = names(obj()@images))
+    })
 
     redn <- reactive({
-      if ("umap" %in% names(obj@reductions)) "umap" else
-              if ("UMAP" %in% names(obj@reductions)) "UMAP" else NULL
+      req(obj())
+      if ("umap" %in% names(obj()@reductions)) "umap" else
+              if ("UMAP" %in% names(obj()@reductions)) "UMAP" else NULL
     })
 
     output$umap <- renderPlot({
-      req(redn())
-      DimPlot(obj, reduction = redn(), group.by = input$group_by)
+      req(redn(), obj())
+      DimPlot(obj(), reduction = redn(), group.by = input$group_by)
     })
 
     output$featureplot <- renderPlot({
-      DefaultAssay(obj) <- "SCT"
-      req(input$feature)
-            FeaturePlot(
-        obj, features = input$feature,
+      req(obj(), input$feature)
+      DefaultAssay(obj()) <- "SCT"
+      FeaturePlot(
+        obj(), features = input$feature,
         reduction = redn()
       )
     })
@@ -116,7 +119,7 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
      # 2) Attach renderers for each selected sample
     observe({
       # Re-wire outputs whenever the selection changes
-      req(length(input$samples) > 0)
+      req(length(input$samples) > 0, obj())
       lapply(input$samples, function(s) {
         out_id <- paste0("sp_", safe_id(s))
         slider_id <- paste0("pt_", safe_id(s))
@@ -129,7 +132,7 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
             size_val <- input[[slider_local]]
             grp <- if (!is.null(input$group_by)) input$group_by else NULL
             SpatialDimPlot(
-              obj,
+              obj(),
               images = s_local,         # <-- one plot per sample
               group.by = grp,
               pt.size.factor = size_val
@@ -162,7 +165,7 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
      # 2) Attach renderers for each selected sample
     observe({
       # Re-wire outputs whenever the selection changes
-      req(length(input$samples) > 0, input$feature)
+      req(length(input$samples) > 0, input$feature, obj())
       lapply(input$samples, function(s) {
         out_id <- paste0("spfeat_", safe_id(s))
         slider_id <- paste0("ptfeat_", safe_id(s))
@@ -173,9 +176,9 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
           slider_local <- slider_id
           output[[out_local]] <- renderPlot({
             size_val <- input[[slider_local]]
-            DefaultAssay(obj) <- "SCT"
+            DefaultAssay(obj()) <- "SCT"
             SpatialFeaturePlot(
-              obj,
+              obj(),
               images = s_local,         # <-- one plot per sample
               features = input$feature,
               pt.size.factor = size_val

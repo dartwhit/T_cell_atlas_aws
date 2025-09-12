@@ -35,9 +35,9 @@ server <- function(input, output,session) {
     paste0(inDir, dataset_files[[input$spatial_study_selector]][["spatial_seurat"]])
   })
 
-  spatial_server(
+    spatial_server(
     id = "sp1",
-    rds_path = spatial_data_path()
+    rds_path = spatial_data_path
   )
 
   options(shiny.trace = FALSE, shiny.fullstacktrace = FALSE, shiny.sanitize.errors = TRUE)
