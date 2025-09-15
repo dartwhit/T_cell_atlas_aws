@@ -97,6 +97,8 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
         slider_id <- paste0("pt_", safe_s)
         dimplot_id <- paste0("sp_dim_", safe_s)
         featureplot_id <- paste0("sp_feat_", safe_s)
+        dld_dim_id <- paste0("dld_dim_", safe_s)
+        dld_feat_id <- paste0("dld_feat_", safe_s)
         
         card(
           card_header(paste("Sample:", s)),
@@ -110,6 +112,13 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
             conditionalPanel(
               condition = paste0("input['", ns("feature"), "'] && input['", ns("feature"), "'].length > 0"),
               plotOutput(ns(featureplot_id), height = 380)
+            )
+          ),
+          card_footer(
+            downloadButton(ns(dld_dim_id), "Download Clusters"),
+            conditionalPanel(
+              condition = paste0("input['", ns("feature"), "'] && input['", ns("feature"), "'].length > 0"),
+              downloadButton(ns(dld_feat_id), "Download Features")
             )
           )
         )
@@ -126,45 +135,56 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
         slider_id <- paste0("pt_", safe_s)
         dimplot_id <- paste0("sp_dim_", safe_s)
         featureplot_id <- paste0("sp_feat_", safe_s)
+        dld_dim_id <- paste0("dld_dim_", safe_s)
+        dld_feat_id <- paste0("dld_feat_", safe_s)
         
         local({
           s_local <- s
           
-          # Render SpatialDimPlot
-          output[[dimplot_id]] <- renderPlot({
+          # Reactive for DimPlot
+          dim_plot_reactive <- reactive({
             size_val_multiplier <- input[[slider_id]]
             if (is.null(size_val_multiplier)) size_val_multiplier <- 1.0
-            
             default_size <- default_pt_sizes()[s_local]
             final_size <- default_size * size_val_multiplier
-            
             grp <- if (!is.null(input$group_by)) input$group_by else NULL
-            SpatialDimPlot(
-              obj(),
-              images = s_local,
-              group.by = grp,
-              pt.size.factor = final_size
-            )
+            SpatialDimPlot(obj(), images = s_local, group.by = grp, pt.size.factor = final_size)
           })
           
-          # Render SpatialFeaturePlot
-          output[[featureplot_id]] <- renderPlot({
+          # Reactive for FeaturePlot
+          feat_plot_reactive <- reactive({
             req(input$feature)
             size_val_multiplier <- input[[slider_id]]
             if (is.null(size_val_multiplier)) size_val_multiplier <- 1.0
-            
             default_size <- default_pt_sizes()[s_local]
             final_size <- default_size * size_val_multiplier
-            
             plot_obj <- obj()
             DefaultAssay(plot_obj) <- "SCT"
-            SpatialFeaturePlot(
-              plot_obj,
-              images = s_local,
-              features = input$feature,
-              pt.size.factor = final_size
-            )
+            SpatialFeaturePlot(plot_obj, images = s_local, features = input$feature, pt.size.factor = final_size)
           })
+
+          # Render plots
+          output[[dimplot_id]] <- renderPlot(dim_plot_reactive())
+          output[[featureplot_id]] <- renderPlot(feat_plot_reactive())
+          
+          # Download handlers
+          output[[dld_dim_id]] <- downloadHandler(
+            filename = function() { paste0(s_local, "_clusters.png") },
+            content = function(file) {
+              png(file, width = 7, height = 7, units = "in", res = 150)
+              print(dim_plot_reactive())
+              dev.off()
+            }
+          )
+          
+          output[[dld_feat_id]] <- downloadHandler(
+            filename = function() { paste0(s_local, "_features.png") },
+            content = function(file) {
+              png(file, width = 7, height = 7, units = "in", res = 150)
+              print(feat_plot_reactive())
+              dev.off()
+            }
+          )
         })
       })
     })
