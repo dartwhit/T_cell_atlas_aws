@@ -89,7 +89,15 @@ explore_sidebar_server <- function(id, selected_study_from_gallery) {
     })
 
     observeEvent(selected_study_from_gallery(), {
-      updateSelectInput(session, "study", selected = selected_study_from_gallery())
+      study_info <- selected_study_from_gallery()
+      # The gallery now returns a list(id=..., view=...)
+      # We only care about the id here.
+      if (is.list(study_info) && !is.null(study_info$id)) {
+        updateSelectInput(session, "study", selected = study_info$id)
+      } else {
+        # Fallback for old behavior if needed
+        updateSelectInput(session, "study", selected = study_info)
+      }
     })
 
     return(

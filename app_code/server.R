@@ -48,8 +48,24 @@ server <- function(input, output,session) {
                                            selected_study_from_gallery = selected_study_from_gallery)
 
   observeEvent(selected_study_from_gallery(), {
-    req(selected_study_from_gallery())
-    nav_select("nav_page", selected = "Explore")
+    study_info <- selected_study_from_gallery()
+    req(study_info)
+
+    if (is.list(study_info) && !is.null(study_info$view)) {
+      if (study_info$view == "scrna") {
+        # Navigate to the scRNA-seq explorer page
+        nav_select("nav_page", selected = "Explore")
+        # The explore_sidebar_module will automatically update its own study selector
+      } else if (study_info$view == "spatial") {
+        # Navigate to the spatial explorer page
+        nav_select("nav_page", selected = "spatial")
+        # Update the study selector on the spatial page
+        updateSelectInput(session, "spatial_study_selector", selected = study_info$id)
+      }
+    } else {
+      # Fallback for old behavior or unexpected data
+      nav_select("nav_page", selected = "Explore")
+    }
   }, ignoreInit = TRUE)
 
   
