@@ -102,7 +102,7 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
           card_header(paste("Sample:", s)),
           div(class = "px-3 py-2",
               sliderInput(ns(slider_id), "Relative point size",
-                          min = 0.2, max = 1.5, value = 1, step = 0.1)
+                          min = 0.2, max = 1.5, value = 1, step = 0.05)
           ),
           layout_columns(
             col_widths = c(6, 6),

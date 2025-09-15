@@ -1,4 +1,5 @@
 library(shiny)
+library(shinyWidgets)
 
 # ---------- MODULE UI ----------
 dataset_gallery_UI <- function(id) {
@@ -6,7 +7,12 @@ dataset_gallery_UI <- function(id) {
   layout_sidebar(
     sidebar = sidebar(
       textInput(ns("search"), "Search"),
-      selectInput(ns("assay"), "Assay", choices = c("All", unique(dataset_meta$assay)))
+      radioGroupButtons(
+        ns("assay"), 
+        label = "Assay", 
+        choices = c("All", "scRNA-seq", "Spatial"),
+        selected = "All"
+      )
     ),
     uiOutput(ns("gallery"))
   )
@@ -19,9 +25,15 @@ dataset_gallery_server <- function(id) {
 
     filtered_datasets <- reactive({
       data <- dataset_meta
-      if (input$assay != "All") {
-        data <- data[data$assay == input$assay, ]
+      
+      # Filter by assay type
+      if (input$assay == "scRNA-seq") {
+        data <- data[data$has_scrna, ]
+      } else if (input$assay == "Spatial") {
+        data <- data[data$has_spatial, ]
       }
+
+      # Filter by search term
       if (nzchar(input$search)) {
         term <- tolower(input$search)
         data <- data[
@@ -40,36 +52,55 @@ dataset_gallery_server <- function(id) {
       }
       cards <- lapply(seq_len(nrow(data)), function(i) {
         row <- data[i, ]
-        data_types <- c()
+        
+        # Create badges for available assay types
+        badges <- list()
         if (row$has_scrna) {
-          data_types <- c(data_types, "scRNA-seq")
+          badges <- append(badges, list(tags$span(class = "badge", "scRNA-seq")))
         }
         if (row$has_spatial) {
-          data_types <- c(data_types, "Spatial")
+          badges <- append(badges, list(tags$span(class = "badge", "Spatial")))
         }
+
+        # Create action buttons based on available data
+        action_buttons <- list()
+        has_both <- row$has_scrna && row$has_spatial
         
-        badges <- lapply(c(row$assay, strsplit(row$tags, ",")[[1]], data_types), function(tg) {
-          tags$span(class = "badge", tg)
-        })
+        if (has_both) {
+          action_buttons <- list(
+            actionButton(ns(paste0("explore_scrna_", row$id)), "View scRNA-seq"),
+            actionButton(ns(paste0("explore_spatial_", row$id)), "View Spatial")
+          )
+        } else if (row$has_scrna) {
+          action_buttons <- list(actionButton(ns(paste0("explore_scrna_", row$id)), "View scRNA-seq"))
+        } else if (row$has_spatial) {
+          action_buttons <- list(actionButton(ns(paste0("explore_spatial_", row$id)), "View Spatial"))
+        }
+
         tags$div(
           class = "dataset-card",
           tags$img(src = row$image, class = "dataset-img", alt = row$name),
           h4(row$name),
-          badges,
+          tags$div(class = "badges", badges),
           tags$p(sprintf("%s cells", row$n_cells)),
-          actionButton(ns(paste0("explore_", row$id)), "Analyze")
+          tags$div(class = "card-actions", action_buttons)
         )
       })
       div(class = "dataset-gallery", cards)
     })
 
-    # Create a reactive value to store the selected study
+    # Create a reactive value to store the selected study and view
     selected_study <- reactiveVal(NULL)
 
-    # Observe the button clicks
+    # Observe button clicks for all datasets
     lapply(dataset_meta$id, function(id) {
-      observeEvent(input[[paste0("explore_", id)]], {
-        selected_study(id)
+      # Observer for scRNA-seq button
+      observeEvent(input[[paste0("explore_scrna_", id)]], {
+        selected_study(list(id = id, view = "scrna"))
+      })
+      # Observer for Spatial button
+      observeEvent(input[[paste0("explore_spatial_", id)]], {
+        selected_study(list(id = id, view = "spatial"))
       })
     })
 
