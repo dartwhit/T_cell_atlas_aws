@@ -19,6 +19,11 @@ library(periscope2)
 library(shinyjs)
 source("setup.R")
 
+## Source UI modules
+source("modules/spatial_unit.R")
+source("modules/dataset_gallery_module.R")
+source("modules/explore_sidebar_module.R")
+
 
 # Feature plot of queried genes
 card_feature <-card("Featureplot of selected genes",
@@ -46,6 +51,7 @@ card_gene_plot <-card("Plot of selected genes",
                             conditionalPanel("output.show_switch == true",
                                              switchInput("heatmap","Show heatmap")
                                              ),
+                            switchInput("plot_type", "Plot Type", value = TRUE, onLabel = "Vln", offLabel = "Box"),
                             
                             withSpinner(
                               
@@ -77,75 +83,71 @@ ui <- page_navbar(
   useShinyjs(), # Enable shinyjs
 
   tags$head(
-    tags$script('
-    $(document).on("shiny:connected", function(e) {
-      dimension = [window.innerWidth, window.innerHeight];
-      Shiny.onInputChange("dimension", dimension);
-      $(window).resize(function(e) {
-        dimension = [window.innerWidth, window.innerHeight];
-        Shiny.onInputChange("dimension", dimension);
+    tags$script(HTML('
+      $(document).on("shiny:connected", function() {
+        function updateDimensions() {
+          Shiny.onInputChange("dimension", [window.innerWidth, window.innerHeight]);
+        }
+        updateDimensions();
+        $(window).resize(updateDimensions);
+
+        // Any element with id starting with "explore_" switches to Explore tab
+        $("[id^=\'explore_\']").on("click", function() {
+          $("a[data-value=\'Explore\']").tab("show");
+        });
       });
-      // Function to switch to the Explore tab
-      $("#explore_Tabib").on("click", function() {
-        $("a[data-value=\'Explore\']").tab("show");
-      });$("#explore_Gur").on("click", function() {
-        $("a[data-value=\'Explore\']").tab("show");
-      });
-      $("#explore_Ma").on("click", function() {
-        $("a[data-value=\'Explore\']").tab("show");
-      });
-      $("#explore_tmkmh").on("click", function() {
-        $("a[data-value=\'Explore\']").tab("show");
-      });
-      $("#explore_Khanna").on("click", function() {
-        $("a[data-value=\'Explore\']").tab("show");
-});
-    });
-  ')
+    ')),
+    tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+
+
   ),
   theme = bs_theme(bootswatch = "flatly"),
   # Page title
   title = "SSc cell atlas",
   id = "nav_page",
-  nav_panel("Get started",
-            card(full_screen = TRUE,
-                 card_header("TMKMH integrated dataset"),
-                 actionButton("explore_tmkmh","Explore"),
-                 imageOutput("TMKMH_img")
+  # nav_panel("Datasets",
+  #           card(full_screen = TRUE,
+  #                card_header("TMKMH integrated dataset"),
+  #                actionButton("explore_tmkmh","Explore"),
+  #                imageOutput("TMKMH_img")
                  
-                 )
-            ,
-            layout_column_wrap(
-              width = 1/4,
+  #                )
+  #           ,
+  #           layout_column_wrap(
+  #             width = 1/4,
 
-              #Tabib
-              card(full_screen = TRUE,
-                   card_header("Tabib et al. 2021"),
-                   actionButton("explore_Tabib","Explore"),
-                   imageOutput("Tabib_img"),
-                   a(href = "https://www.nature.com/articles/s41467-021-24607-6",
-                     p(strong("Tabib, T., Huang, M., Morse, N., Papazoglou, A., Behera, R., Jia, M., Bulik, M., Monier, D. E., Benos, P. v., Chen, W., Domsic, R., & Lafyatis, R. (2021)."),"Myofibroblast transcriptome indicates SFRP2hi fibroblast progenitors in systemic sclerosis skin. Nature Communications, 12(1), 4384."),
-                     style = "color:grey", target="_blank")
-              ),
-              # Gur
-              card(full_screen = TRUE,
-                   card_header("Gur et al. 2022"),
-                   actionButton("explore_Gur","Explore"),
-                   imageOutput("Gur_img")),
+  #             #Tabib
+  #             card(full_screen = TRUE,
+  #                  card_header("Tabib et al. 2021"),
+  #                  actionButton("explore_Tabib","Explore"),
+  #                  imageOutput("Tabib_img"),
+  #                  a(href = "https://www.nature.com/articles/s41467-021-24607-6",
+  #                    p(strong("Tabib, T., Huang, M., Morse, N., Papazoglou, A., Behera, R., Jia, M., Bulik, M., Monier, D. E., Benos, P. v., Chen, W., Domsic, R., & Lafyatis, R. (2021)."),"Myofibroblast transcriptome indicates SFRP2hi fibroblast progenitors in systemic sclerosis skin. Nature Communications, 12(1), 4384."),
+  #                    style = "color:grey", target="_blank")
+  #             ),
+  #             # Gur
+  #             card(full_screen = TRUE,
+  #                  card_header("Gur et al. 2022"),
+  #                  actionButton("explore_Gur","Explore"),
+  #                  imageOutput("Gur_img")),
 
-              # Ma
-              card(full_screen = TRUE,
-                   card_header("Ma et al. 2024"),
-                   actionButton("explore_Ma","Explore"),
-                   imageOutput("Ma_img")),
+  #             # Ma
+  #             card(full_screen = TRUE,
+  #                  card_header("Ma et al. 2024"),
+  #                  actionButton("explore_Ma","Explore"),
+  #                  imageOutput("Ma_img")),
 
-              # Clark
-              card(full_screen = TRUE,
-                   card_header("Khanna et al. 2022"),
-                   actionButton("explore_Khanna","Explore"),
-                   imageOutput("Khanna_img")),
+  #             # Clark
+  #             card(full_screen = TRUE,
+  #                  card_header("Khanna et al. 2022"),
+  #                  actionButton("explore_Khanna","Explore"),
+  #                  imageOutput("Khanna_img")),
 
-            )
+  #           )
+  # ),
+    nav_panel(
+    "Datasets",
+    dataset_gallery_UI("gallery_module")
   ),
   
   
@@ -153,97 +155,7 @@ ui <- page_navbar(
   # Explore page
     nav_panel("Explore",
             layout_sidebar(
-              sidebar = sidebar(
-                title = "Select dataset and genes",
-                position = "left",
-                selectInput("study","Select study to explore",
-                            choices = c(
-                              "TMKMH" = "tmkmh",
-                              "Tabib et al." = "tabib",
-                              "Gur et al." = "gur",
-                              "Ma et al." = "ma",
-                              "Khanna et al" = "khanna"
-                            )),
-
-                
-                conditionalPanel(
-                  condition="input.data_level == 'full'",
-                  switchInput("anno",
-                              "Original seurat clusters",
-                              value = FALSE)
-                ),
-                # Select object to visualize
-                # selectInput("data_level","Select data to visualize",
-                #             choices = c("Full" = "full",
-                #                         "Fibroblasts" = "fib",
-                #                         "Immune cells" = "immune",
-                #                         "Myeloid cells" = "mye")),
-                
-                # Data level selection
-                uiOutput("data_level_ui"),
-                actionBttn(
-                  "load_btn","Load Data"
-                ),
-                
-                # Content to be hidden
-                hidden(
-                  div(id = "hidden_menu",
-
-                      # Select to visualize genes or pathways
-                      awesomeRadio("feature_type",
-                                   "Select a type of features to visualize",
-                                   choices = c("Genes", "Pathways"),
-                                   selected = "Genes"
-                                   
-                      ),
-                      ##### Branch based on selected feature type
-                      # -------- Gene mode --------
-                      conditionalPanel(
-                        condition = "input.feature_type == 'Genes'",
-                        # Load gene list
-                        checkboxInput("use_textinput", "Use my own gene list", value = FALSE),
-                        
-                        conditionalPanel(
-                          condition = "input.use_textinput == 0",
-                          selectizeInput("gene_select","Select a gene", choices = NULL, multiple = TRUE)
-                        ),
-                        
-                        conditionalPanel(
-                          condition = "input.use_textinput == 1",
-                          textAreaInput("gene_input", "Paste gene list:")
-                        )
-                      ),
-                      # --------- Pathway mode ------
-                      conditionalPanel(
-                        condition = "input.feature_type == 'Pathways'",
-                        # Load gene list
-                        
-                        # # Load pathway list according to pathway categories
-                        # checkboxGroupButtons("pathway_cat","Pathway category",
-                        #                      choices = c("Hallmark","Reactome")),
-                        
-                        ### Subset: rownames(fibs@assays$VAMcdf) to get a specific category of pathways
-                        checkboxInput("use_textinput_VAM", "Add my own gene set", value = FALSE),
-                        selectInput("pathway_select"," Select pathways", choices = NULL, multiple = TRUE),
-                        conditionalPanel(
-                          condition = "input.use_textinput_VAM ==1",
-                          textInput("geneset_name","Name of your gene set"),
-                          textAreaInput("VAM_geneset", "Please paste a list of genes for VAM"),
-                          actionBttn("submit_geneset","Add geneset")
-                        )
-                      )
-                      
-                      )# End of div
-                ),
-                
-
-                
-
-
-                
-              
-                
-              ),
+              sidebar = explore_sidebar_UI("explore_sidebar_module"),
               navset_tab(
                 id = "explore_tabs",
                 nav_panel(title = "Plots",
@@ -269,7 +181,29 @@ ui <- page_navbar(
             ),
   ),
   
-  
+  nav_panel("Spatial data explorer",
+    value = "spatial",
+    bslib::page_fluid(
+    layout_sidebar(
+      sidebar = sidebar(
+        title = "Spatial data options",
+        selectInput("spatial_study_selector", "Select Study", choices = NULL),
+        selectInput(NS("sp1", "group_by"), 
+                    "Group by (metadata)", 
+                    choices = c("Seurat cluster" = "cluster",
+                    "Key regions" =  "Key_Regions"),
+                  selected = "cluster"),
+        selectizeInput(NS("sp1", "feature"), "Feature (Gene/pathway)",multiple = TRUE,
+        choices = NULL, options = list(placeholder = "Type to search…")),
+        checkboxGroupInput(NS("sp1", "samples"),
+                      "Select samples to view"
+                    )
+      ),
+      spatial_UI("sp1")
+    )
+    )
+
+  ),
   
   nav_spacer(),
   nav_panel(

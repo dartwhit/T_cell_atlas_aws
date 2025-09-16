@@ -14,7 +14,6 @@ on:
 jobs:
   deploy-dev:
     runs-on: ubuntu-latest
-
     steps:
       - name: Deploy DEV to EC2
         uses: appleboy/ssh-action@v1.0.3
@@ -22,32 +21,52 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
           script: |
-            set -e
+            set -euo pipefail
+
             cd /home/ubuntu/T_cell_atlas_aws
 
-            echo "📦 Switching to dev branch and pulling latest..."
-            git fetch origin dev
-            git checkout dev
-            git pull origin dev
+            echo "📦 Resetting working tree to origin/dev..."
+            git fetch --all --prune
+            # Make sure we're on a local 'dev' branch tracking origin/dev
+            git checkout -B dev origin/dev
+            # Ensure no stray files remain
+            git clean -xdf
 
-            echo "🧹 Removing old container named 'atlas-dev' (if any)..."
+            echo "🔐 Setting permissions for mounted volumes..."
+            mkdir -p /home/ubuntu/atlas/dev_cache
+            sudo chmod 777 /home/ubuntu/atlas/dev_cache
+            mkdir -p /home/ubuntu/atlas/logs/dev
+            sudo chmod 777 /home/ubuntu/atlas/logs/dev
+
+            echo "🧹 Removing existing DEV container (if any)..."
             docker rm -f atlas-dev || true
 
-            echo "🔍 Also removing any container using port 3840..."
-            CONTAINER_ID=$(docker ps --filter "publish=3840" --format "{{.ID}}")
-            if [ ! -z "$CONTAINER_ID" ]; then
-              echo "🛑 Stopping/removing container $CONTAINER_ID using port 3840"
-              docker stop $CONTAINER_ID || true
-              docker rm $CONTAINER_ID || true
-            fi
+            echo "🔍 Freeing port 3840 if used..."
+            CID=$(docker ps --filter "publish=3840" --format "{{.ID}}")
+            [ -n "${CID:-}" ] && docker stop "$CID" && docker rm "$CID" || true
 
-            echo "🛠 Rebuilding DEV Docker image..."
-            docker build --no-cache -t atlas-dev .
+            echo "🛠 Rebuilding DEV image..."
+            docker build --no-cache -t atlas:dev .
 
             echo "🚀 Running new DEV container..."
             docker run -d \
               --name atlas-dev \
+              --restart unless-stopped \
               -p 3840:3838 \
-              -v /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data \
-              atlas-dev
+              -e SHINY_LOG_STDERR=1 \
+              -v /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro \
+              -v /home/ubuntu/atlas/dev_cache:/srv/shiny-server/atlas/app_cache \
+              -v /home/ubuntu/atlas/logs/dev:/var/log/shiny-server \
+              atlas:dev
+
+            echo "🩺 Health check..."
+            sleep 3
+            curl -sSf http://localhost:3840/atlas/ >/dev/null || {
+              echo "❌ Health check failed. Recent logs:" >&2
+              docker logs --tail=200 atlas-dev || true
+              exit 1
+            }
+
+            docker image prune -f || true

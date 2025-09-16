@@ -8,60 +8,111 @@ library(dplyr)
 library(stringr)
 library(VAM)
 library(shinyjs)
+library(tidyr)
 source("setup.R")
+source("modules/dataset_gallery_module.R")
+source("modules/explore_sidebar_module.R")
+source("modules/spatial_unit.R")
 
 options(shiny.trace = TRUE)
 
 
 # Define server logic required to draw a histogram
 server <- function(input, output,session) {
+  # Get studies with spatial data
+  studies_with_spatial <- reactive({
+    names(dataset_files)[sapply(dataset_files, function(x) !is.null(x$spatial_seurat))]
+  })
+  
+  # Update the spatial study selector
+  observe({
+    updateSelectInput(session, "spatial_study_selector", choices = studies_with_spatial())
+  })
+  
+  # Get the path to the selected spatial data
+  spatial_data_path <- reactive({
+    req(input$spatial_study_selector)
+    paste0(inDir, dataset_files[[input$spatial_study_selector]][["spatial_seurat"]])
+  })
+
+    spatial_server(
+    id = "sp1",
+    rds_path = spatial_data_path
+  )
+
   options(shiny.trace = FALSE, shiny.fullstacktrace = FALSE, shiny.sanitize.errors = TRUE)
 
+  selected_study_from_gallery <- dataset_gallery_server("gallery_module")
+
+  sidebar_inputs <- explore_sidebar_server("explore_sidebar_module", 
+                                           selected_study_from_gallery = selected_study_from_gallery)
+
+  observeEvent(selected_study_from_gallery(), {
+    study_info <- selected_study_from_gallery()
+    req(study_info)
+
+    if (is.list(study_info) && !is.null(study_info$view)) {
+      if (study_info$view == "scrna") {
+        # Navigate to the scRNA-seq explorer page
+        nav_select("nav_page", selected = "Explore")
+        # The explore_sidebar_module will automatically update its own study selector
+      } else if (study_info$view == "spatial") {
+        # Navigate to the spatial explorer page
+        nav_select("nav_page", selected = "spatial")
+        # Update the study selector on the spatial page
+        updateSelectInput(session, "spatial_study_selector", selected = study_info$id)
+      }
+    } else {
+      # Fallback for old behavior or unexpected data
+      nav_select("nav_page", selected = "Explore")
+    }
+  }, ignoreInit = TRUE)
+
   
-  # ########################## Starting page #######################
-  output$Tabib_img <- renderImage({
+  # # ########################## Starting page #######################
+  # output$Tabib_img <- renderImage({
 
-    screen_width <- input$dimension[1]
-    image_width <- (screen_width / 2)*0.9
+  #   screen_width <- input$dimension[1]
+  #   image_width <- (screen_width / 2)*0.9
 
-    list(src = "imgs/Tabib_img.png",
-         width = paste0(image_width, "px"))
-  }, deleteFile = FALSE)
+  #   list(src = "imgs/Tabib_img.png",
+  #        width = paste0(image_width, "px"))
+  # }, deleteFile = FALSE)
 
-  output$Gur_img <- renderImage({
+  # output$Gur_img <- renderImage({
 
-    screen_width <- input$dimension[1]
-    image_width <- (screen_width / 2)*0.9
+  #   screen_width <- input$dimension[1]
+  #   image_width <- (screen_width / 2)*0.9
 
-    list(src = "imgs/Gur_img.png",
-         width = paste0(image_width, "px"))
-  }, deleteFile = FALSE)
+  #   list(src = "imgs/Gur_img.png",
+  #        width = paste0(image_width, "px"))
+  # }, deleteFile = FALSE)
 
-  output$Ma_img <- renderImage({
+  # output$Ma_img <- renderImage({
 
-    screen_width <- input$dimension[1]
-    image_width <- (screen_width / 2)*0.9
+  #   screen_width <- input$dimension[1]
+  #   image_width <- (screen_width / 2)*0.9
 
-    list(src = "imgs/Ma_img.png",
-         width = paste0(image_width, "px"))
-  }, deleteFile = FALSE)
+  #   list(src = "imgs/Ma_img.png",
+  #        width = paste0(image_width, "px"))
+  # }, deleteFile = FALSE)
 
-  output$Khanna_img <- renderImage({
+  # output$Khanna_img <- renderImage({
 
-    screen_width <- input$dimension[1]
-    image_width <- (screen_width / 2)*0.9
+  #   screen_width <- input$dimension[1]
+  #   image_width <- (screen_width / 2)*0.9
 
-    list(src = "imgs/Khanna_img.png",
-         width = paste0(image_width, "px"))
-  }, deleteFile = FALSE)
+  #   list(src = "imgs/Khanna_img.png",
+  #        width = paste0(image_width, "px"))
+  # }, deleteFile = FALSE)
   
-  output$TMKMH_img <- renderImage({
-    image_width <- input$dimentions[1]*0.9
-    list(src = "imgs/TMKMH_img.png",
-      width = paste0(image_width,"px")
-    )
-  },
-  deleteFile = FALSE)
+  # output$TMKMH_img <- renderImage({
+  #   image_width <- input$dimentions[1]*0.9
+  #   list(src = "imgs/TMKMH_img.png",
+  #     width = paste0(image_width,"px")
+  #   )
+  # },
+  # deleteFile = FALSE)
   
   
   observeEvent(input$explore_Tabib,{
@@ -83,16 +134,8 @@ server <- function(input, output,session) {
   observeEvent(input$explore_tmkmh,{
     updateSelectInput(session, "study", selected = "tmkmh")
   })
-  
-  ################################## Explore page #################################
-  
 
-  
-  output$data_level_ui <- renderUI({
-    selectInput("data_level",
-                "Select data to visualize",
-                choices = data_level_choices[[input$study]])
-  })
+  ################################## Explore page #################################
   
   
   reset_trigger <- reactiveVal(FALSE)
@@ -107,27 +150,27 @@ server <- function(input, output,session) {
   
   DEG_path <- reactive({
     input$by_disease
-    # req(input$study, input$data_level, input$by_disease, input$anno)
+    # req(sidebar_inputs$study(), sidebar_inputs$data_level(), input$by_disease, sidebar_inputs$anno())
     
     if (input$by_disease == FALSE) {
-      if (input$data_level == "full") {
-        if (input$anno == TRUE) {
-          paste0(inDir, DE_dir, dataset_files[[input$study]][[input$data_level]][["DEGs_auto"]])
+      if (sidebar_inputs$data_level() == "full") {
+        if (sidebar_inputs$anno() == TRUE) {
+          paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DEGs_auto"]])
         } else {
-          paste0(inDir, DE_dir, dataset_files[[input$study]][[input$data_level]][["DEGs_broad"]])
+          paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DEGs_broad"]])
         }
       } else {
-        paste0(inDir, DE_dir, dataset_files[[input$study]][[input$data_level]][["DEGs"]])
+        paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DEGs"]])
       }
     } else {
-      if (input$data_level == "full") {
-        if (input$anno == TRUE) {
-          paste0(inDir, DE_dir, dataset_files[[input$study]][[input$data_level]][["DE_by_disease_auto"]])
+      if (sidebar_inputs$data_level() == "full") {
+        if (sidebar_inputs$anno() == TRUE) {
+          paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DE_by_disease_auto"]])
         } else {
-          paste0(inDir, DE_dir, dataset_files[[input$study]][[input$data_level]][["DE_by_disease_broad"]])
+          paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DE_by_disease_broad"]])
         }
       } else {
-        paste0(inDir, DE_dir, dataset_files[[input$study]][[input$data_level]][["DE_by_disease"]])
+        paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DE_by_disease"]])
       }
     }
   })
@@ -135,21 +178,21 @@ server <- function(input, output,session) {
   VAM_path <- reactive({
     input$by_disease
     
-    if(input$data_level == "full") {
-      if(input$anno ==TRUE) {
-        paste0(inDir,DE_dir,dataset_files[[input$study]][[input$data_level]][["VAM_by_disease_auto"]])
+    if(sidebar_inputs$data_level() == "full") {
+      if(sidebar_inputs$anno() ==TRUE) {
+        paste0(inDir,DE_dir,dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["VAM_by_disease_auto"]])
       } else {
-        paste0(inDir,DE_dir,dataset_files[[input$study]][[input$data_level]][["VAM_by_disease_broad"]])
+        paste0(inDir,DE_dir,dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["VAM_by_disease_broad"]])
       }
     } else {
-      paste0(inDir, DE_dir, dataset_files[[input$study]][[input$data_level]][["VAM_by_disease"]])
+      paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["VAM_by_disease"]])
       
     }
   })
   
   
   # ## Refresh DE table when one of the input changes: study, data_level, anno, feature_type
-  # observeEvent({input$study, input$anno, input$data_level, input$feature_type},
+  # observeEvent({sidebar_inputs$study(), sidebar_inputs$anno(), sidebar_inputs$data_level(), sidebar_inputs$feature_type()},
   #              {
   #                
   #                
@@ -158,8 +201,9 @@ server <- function(input, output,session) {
   
 
   ## Reload seurat object and DE tables when load button is clicked or annotation changed
-  observeEvent({input$load_btn
-    input$anno},{
+  observeEvent({sidebar_inputs$load_btn()
+    sidebar_inputs$anno()},
+    {
     # Clear previous loaded dataset
     reset_trigger(TRUE)
     invalidateLater(0,session)
@@ -167,18 +211,18 @@ server <- function(input, output,session) {
     seurat_obj(NULL)
     gc()
     
-    req(input$study, input$data_level)
+    req(sidebar_inputs$study(), sidebar_inputs$data_level())
     
-    shinyjs::show("hidden_menu")
+    shinyjs::show(selector = "#explore_sidebar_module-hidden_menu")
     
     ################## get files paths of the selected dataset #############
-    seurat_path <- paste0(inDir,dataset_files[[input$study]][[input$data_level]][["seurat"]])
-    gene_list_path <- paste0(inDir,dataset_files[[input$study]][[input$data_level]][["gene_list"]])
+    seurat_path <- paste0(inDir,dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["seurat"]])
+    gene_list_path <- paste0(inDir,dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["gene_list"]])
     
     
     req(DEG_path())
     print(paste("Loading DEGs from", DEG_path()))
-    deg_df <- if (grepl("\\.csv$", DEG_path())) {
+     deg_df <- if (endsWith(DEG_path(), ".csv")) {
       read.csv(DEG_path())
     } else {
       read.delim(DEG_path(), sep = "\t")
@@ -188,17 +232,19 @@ server <- function(input, output,session) {
     cell_clusters(levels(as.factor(deg_df$cluster)))
     updateSelectInput(session, "cell_cluster", choices = cell_clusters())
     
-    meta_file <- dataset_files[[input$study]][["meta"]]
+    meta_file <- dataset_files[[sidebar_inputs$study()]][["meta"]]
     metadata_path <- paste0(inDir,meta_file)
 
     ################## Load data ##################
     # Seurat object and gene lists
+    print(seurat_path)
     seurat_obj(readRDS(seurat_path))
     gene_list_obj(readRDS(gene_list_path))
     
     vam_names <- rownames(seurat_obj()@assays$VAMcdf)
-    vam_names <- str_remove(vam_names,"HALLMARK-")
-    pathway_list()
+    pathway_names_for_display <- str_remove(vam_names,"HALLMARK-")
+    pathway_choices <- setNames(vam_names, pathway_names_for_display)
+    pathway_list(pathway_choices)
     
     
     # Try loading metadata,
@@ -220,7 +266,7 @@ server <- function(input, output,session) {
 
     
     # Try loading VAM df
-    # VAM_file <- dataset_files[[input$study]][[input$data_level]][["VAM_df"]]
+    # VAM_file <- dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["VAM_df"]]
     # VAM_path <- paste0(inDir,DE_dir,VAM_file)
     # print(VAM_path)
     
@@ -243,24 +289,22 @@ server <- function(input, output,session) {
     # update gene, pathway and cell type list
     # cell_clusters(levels(as.factor(data$cluster)))
     
-    updateSelectizeInput(session, "gene_select", choices = gene_list_obj(), server = TRUE)
-    updateSelectInput(session,"pathway_select", choices = rownames(seurat_obj()@assays$VAMdist))
-    # updateSelectInput(session, "cell_cluster", choices = cell_clusters())
-    updateSelectInput(session,"pathway_select", choices = pathway_list())
+    updateSelectizeInput(session, "explore_sidebar_module-gene_select", choices = gene_list_obj(), server = TRUE)
+    updateSelectInput(session,"explore_sidebar_module-pathway_select", choices = pathway_list())
     
     
-    print(paste("Loaded",input$data_level,"from dataset:", input$study))  
-    showNotification(paste("Loading data for study:", input$study, 
-                           "and data level:", input$data_level), type = "message")
+    print(paste("Loaded",sidebar_inputs$data_level(),"from dataset:", sidebar_inputs$study()))  
+    showNotification(paste("Loading data for study:", sidebar_inputs$study(), 
+                           "and data level:", sidebar_inputs$data_level()), type = "message")
 
-  })
+    })
   
   observeEvent(input$by_disease, {
-    req(input$load_btn > 0)
+    req(sidebar_inputs$load_btn() > 0)
     req(DEG_path())
     
     print(paste("Reloading DEGs from", DEG_path()))
-    deg_df <- if (grepl("\\.csv$", DEG_path())) {
+     deg_df <- if (endsWith(DEG_path(), ".csv")) {
       read.csv(DEG_path())
     } else {
       read.delim(DEG_path(), sep = "\t")
@@ -272,18 +316,29 @@ server <- function(input, output,session) {
   })
   
   # trigger reset when changing study or dataset level
-  observeEvent(list(input$study,input$data_level),{
+  observeEvent(list(sidebar_inputs$study(),sidebar_inputs$data_level()),{
     reset_trigger(TRUE)
     invalidateLater(0, session)
     reset_trigger(FALSE)
     
+    # Hide the sidebar options
+    shinyjs::hide(selector = "#explore_sidebar_module-hidden_menu")
+    
+    # Reset reactive values
+    seurat_obj(NULL)
+    gene_list_obj(NULL)
+    VAM_df(NULL)
+    DEGs_df(NULL)
+    cell_clusters(NULL)
+    pathway_list(NULL)
+    meta_df(NULL)
+    
     #Clear gene/pathway input fields
-    updateSelectizeInput(session, "gene_select", choices = NULL, selected = character(0))
-    updateTextInput(session, "gene_input",value = "")
+    updateSelectizeInput(session, "explore_sidebar_module-gene_select", choices = NULL, selected = character(0))
+    updateTextInput(session, "explore_sidebar_module-gene_input",value = "")
     
     
-    updateSelectInput(session, "pathway_select", choices = NULL, selected = character(0))
-    updateTextInput(session, "pathway_input", value = "")
+    updateSelectInput(session, "explore_sidebar_module-pathway_select", choices = NULL, selected = character(0))
     
     
     updateSelectInput(session, "cell_cluster", choices = NULL, selected = character(0))
@@ -299,9 +354,9 @@ server <- function(input, output,session) {
     # Ensure the object is not NULL
     if (!is.null(obj)) {
       # Change the default assay based on input
-      if (input$feature_type == "Genes") {
+      if (sidebar_inputs$feature_type() == "Genes") {
         DefaultAssay(obj) <- "RNA"
-      } else if (input$feature_type == "Pathways") {
+      } else if (sidebar_inputs$feature_type() == "Pathways") {
         DefaultAssay(obj) <- "VAMcdf"
       }
       
@@ -314,7 +369,7 @@ server <- function(input, output,session) {
   # ------------ UMAP of the full dataset ---------------
   full_umap <- reactive({
     req(seurat_obj())
-    if(input$anno == TRUE){
+    if(sidebar_inputs$anno() == TRUE){
       DimPlot(seurat_obj(), group.by = "seurat_clusters")
     }else{
       DimPlot(seurat_obj())
@@ -344,11 +399,11 @@ server <- function(input, output,session) {
       new_gene_queried()
     }
     
-    if (!input$use_textinput && length(input$gene_select) > 0) {
-      return(input$gene_select)
-    } else if (input$use_textinput && nchar(input$gene_input) > 0) {
+    if (!sidebar_inputs$use_textinput() && length(sidebar_inputs$gene_select()) > 0) {
+      return(sidebar_inputs$gene_select())
+    } else if (sidebar_inputs$use_textinput() && nchar(sidebar_inputs$gene_input()) > 0) {
       # Splitting by comma, tab, space, or newline
-      genes <- unlist(strsplit(input$gene_input, "[,\n]+"))
+      genes <- unlist(strsplit(sidebar_inputs$gene_input(), "[,\n]+"))
       genes <- genes[genes != ""]  # Remove any empty strings
       return(genes)
     } else {
@@ -361,16 +416,16 @@ server <- function(input, output,session) {
       return(NULL)
     }
     if (input$update_gene_queried){
-      if(input$feature_type == "Pathways"){
+      if(sidebar_inputs$feature_type() == "Pathways"){
         new_gene_queried()
         
       }
     }
-    if (!input$use_textinput_VAM && length(input$pathway_select) > 0) {
-      return(input$pathway_select)
-    } else if (input$use_textinput_VAM && nchar(input$pathway_input) > 0) {
+    if (!sidebar_inputs$use_textinput_VAM() && length(sidebar_inputs$pathway_select()) > 0) {
+      return(sidebar_inputs$pathway_select())
+    } else if (sidebar_inputs$use_textinput_VAM() && nchar(sidebar_inputs$pathway_input()) > 0) {
       # Splitting by comma, tab, space, or newline
-      pathways <- unlist(strsplit(input$pathway_input, "[,\n]+"))
+      pathways <- unlist(strsplit(sidebar_inputs$pathway_input(), "[,\n]+"))
       pathways <- pathways[pathways != ""]  # Remove any empty strings
       return(pathways)
     } else {
@@ -379,12 +434,12 @@ server <- function(input, output,session) {
   })
   
   ### Append user-defined pathway
-  observeEvent(input$submit_geneset,{
+  observeEvent(sidebar_inputs$submit_geneset(),{
     curr_obj <- seurat_obj()
-    if (input$geneset_name != "" && nchar(input$VAM_geneset>0)){
-      new_geneset_name <- input$geneset_name
+    if (sidebar_inputs$geneset_name() != "" && nchar(sidebar_inputs$VAM_geneset()>0)){
+      new_geneset_name <- sidebar_inputs$geneset_name()
       # Parse gene list
-      new_geneset <- unlist(strsplit(input$VAM_geneset, "[,\n]+"))
+      new_geneset <- unlist(strsplit(sidebar_inputs$VAM_geneset(), "[,\n]+"))
       new_geneset <- new_geneset[new_geneset != ""]  # Remove any empty strings
       print(new_geneset)  # Debug print to console
       
@@ -405,13 +460,18 @@ server <- function(input, output,session) {
       
       # Update seurat object
       seurat_obj(curr_obj)
-      pathway_list(rownames(curr_obj@assays$VAMcdf))
-      updateSelectInput(session,"pathway_select", choices = pathway_list())
+      
+      vam_names <- rownames(curr_obj@assays$VAMcdf)
+      pathway_names_for_display <- str_remove(vam_names,"HALLMARK-")
+      pathway_choices <- setNames(vam_names, pathway_names_for_display)
+      pathway_list(pathway_choices)
+      
+      updateSelectInput(session,"explore_sidebar_module-pathway_select", choices = pathway_list(), selected = new_geneset_name)
     }
   })
   
   output$show_switch <- reactive({
-     (input$feature_type == "Genes") && (length(gene_queried()) > 3)
+     (sidebar_inputs$feature_type() == "Genes") && (length(gene_queried()) > 3)
   })
   outputOptions(output, "show_switch", suspendWhenHidden= FALSE)
   
@@ -480,7 +540,7 @@ server <- function(input, output,session) {
   
   
   output$featurePlot <- renderPlot({
-    if(input$feature_type == "Genes"){
+    if(sidebar_inputs$feature_type() == "Genes"){
       featureplot_plot_gene()
     }else{
       featureplot_plot_pathway()
@@ -512,7 +572,7 @@ server <- function(input, output,session) {
     # Initialize variables
     feature_names <- NULL
     curr_obj <- seurat_obj()
-    f_type <- input$feature_type
+    f_type <- sidebar_inputs$feature_type()
     
     # Determine feature names based on input
     if (f_type == "Genes") {
@@ -547,11 +607,36 @@ server <- function(input, output,session) {
       # Show default dot plot or violin plot
       if (length(feature_names) <= 3) {
         # Show a violin plot for <= 3 features
-        VlnPlot(curr_obj, 
-                features = feature_names, 
-                # assay = "SCT",
-                split.by = "Disease", 
-                split.plot = TRUE)
+        if (is.null(input$plot_type) || input$plot_type) { # Default to VlnPlot
+          assay_to_use <- if (f_type == "Genes") {
+            if ("SCT" %in% Assays(curr_obj)) "SCT" else "RNA"
+          } else {
+            "VAMcdf"
+          }
+          VlnPlot(curr_obj, 
+                  features = feature_names, 
+                  assay = assay_to_use,
+                  split.by = "Disease", 
+                  split.plot = TRUE,
+                  pt.size = 0,
+                  cols = c("HC" = "#cb07a4ff", "SSc" = "#09b646ff"))
+        } else { # BoxPlot
+          assay_to_use <- if (f_type == "Genes") {
+            if ("SCT" %in% Assays(curr_obj)) "SCT" else "RNA"
+          } else {
+            "VAMcdf"
+          }
+          
+          plot_data <- FetchData(curr_obj, vars = c(feature_names, "Disease"), assay = assay_to_use) %>%
+            pivot_longer(cols = -Disease, names_to = "feature", values_to = "expression")
+          
+          ggplot(plot_data, aes(x = Disease, y = expression, fill = Disease)) +
+            geom_boxplot(outlier.shape = NA) +
+            scale_fill_manual(values = c("HC" = "#cb07a4ff", "SSc" = "#09b646ff")) +
+            facet_wrap(~feature, scales = "free_y") +
+            theme_classic() +
+            theme(axis.text.x = element_text(angle = 45, hjust = 1))
+        }
       } else {
         # Show a dot plot for > 3 features by default
         DotPlot(curr_obj, 
@@ -574,7 +659,7 @@ server <- function(input, output,session) {
 
   output$exp_plot_UI <- renderUI({
     if (!is.null(gene_queried()) || !is.null(pathway_queried())) {
-      if(input$study == "khanna"){
+      if(sidebar_inputs$study() == "khanna"){
         textOutput("geneExpPlot_Khanna_msg")
       }else{
         plotOutput("geneExpPlot")
@@ -594,7 +679,7 @@ server <- function(input, output,session) {
     },
     content = function(file){
       filetype <- tools::file_ext(file)
-      if (input$feature_type == "Genes") {
+      if (sidebar_inputs$feature_type() == "Genes") {
         p <- plot(featureplot_plot_gene())
       } else {
         p <- plot(featureplot_plot_pathway())
@@ -632,9 +717,9 @@ server <- function(input, output,session) {
 
   DEGs_df_show <- reactive({
     
-    req(input$study, input$feature_type)
+    req(sidebar_inputs$study(), sidebar_inputs$feature_type())
     
-    if(input$feature_type == "Genes"){
+    if(sidebar_inputs$feature_type() == "Genes"){
       req(DEGs_df())
       
       DEGs_df() %>%
@@ -642,7 +727,7 @@ server <- function(input, output,session) {
         dplyr::select(gene, avg_log2FC, p_val, p_val_adj) %>%
         dplyr::mutate(avg_log2FC = round(avg_log2FC,3)
         )
-    }else if(input$feature_type == "Pathways"){
+    }else if(sidebar_inputs$feature_type() == "Pathways"){
       req(VAM_df())
       VAM_df() %>%
         dplyr::filter(cluster == cell_cluster_selected()) %>%
@@ -677,7 +762,7 @@ server <- function(input, output,session) {
   
   output$downloadDEGs <- downloadHandler(
     filename = function(){
-      paste0(input$study,"_DEGs_",input$data_level,".txt")
+      paste0(sidebar_inputs$study(),"_DEGs_",sidebar_inputs$data_level(),".txt")
     },
     content = function(file){
       write.table(DEGs_df_show(), file)
@@ -685,10 +770,10 @@ server <- function(input, output,session) {
   )
   
   output$DEGs_msg <- renderUI({
-    if (is.null(DEGs_df()) && input$feature_type == "Genes") {
+    if (is.null(DEGs_df()) && sidebar_inputs$feature_type() == "Genes") {
       div(style = "color: red; font-weight: bold; text-align: center;",
           "Please click the 'Load Data' button to display the Genes table.")
-    } else if (is.null(VAM_df()) && input$feature_type == "Pathways") {
+    } else if (is.null(VAM_df()) && sidebar_inputs$feature_type() == "Pathways") {
       div(style = "color: red; font-weight: bold; text-align: center;",
           "Please click the 'Load Data' button to display the Pathways table.")
     }
@@ -701,9 +786,9 @@ server <- function(input, output,session) {
     print(idx)
     
     new_gene <- DEGs_df_show()[idx,]$gene
-    # if(input$feature_type == "Genes"){
+    # if(sidebar_inputs$feature_type() == "Genes"){
     #   new_gene <- DEGs_df()[idx,]$gene
-    # }else if(input$feature_type == "Pathways"){
+    # }else if(sidebar_inputs$feature_type() == "Pathways"){
     #   new_gene <- VAM_df()[idx,]$gene
     #   print(paste0("New pathway: ", new_gene))
     # }
@@ -715,16 +800,19 @@ server <- function(input, output,session) {
     nav_select("explore_tabs", selected = "plots")
     
     # Create branches based on feature type
-    feature_type_selected <- input$feature_type
+    feature_type_selected <- sidebar_inputs$feature_type()
     print(feature_type_selected)
     updateAwesomeRadio(session,"feature_type", selected = feature_type_selected)
     
     
-    input_id <- ifelse(feature_type_selected == "Genes", "gene_select", "pathway_select") # Get correct input id for genes and pathways
+    input_id <- if (feature_type_selected == "Genes") "explore_sidebar_module-gene_select" else "explore_sidebar_module-pathway_select"
     if (feature_type_selected == "Genes") {
       choices <- gene_list_obj()
+      selected_value <- as.character(new_gene_queried())
     } else {
       choices <- pathway_list()
+      selected_name <- as.character(new_gene_queried())
+      selected_value <- choices[names(choices) == selected_name]
     }
     
     if (is.null(choices)) {
@@ -734,14 +822,13 @@ server <- function(input, output,session) {
     updateSelectizeInput(session,
                          # "gene_select",
                          input_id,
-                         selected = as.character(new_gene_queried()),
+                         selected = selected_value,
                          choices = choices,
                          server = TRUE
     )
     
 })
   
-
 
 
   output$meta_df <- renderUI({
@@ -762,5 +849,3 @@ server <- function(input, output,session) {
 
 
 }
-
-

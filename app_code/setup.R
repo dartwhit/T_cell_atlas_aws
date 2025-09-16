@@ -4,6 +4,36 @@ cat("Working directory is:", getwd(), "\n", file = stderr())
 
 
 
+dataset_meta <- read.delim(
+  file.path("config", "datasets.tsv"),
+  sep = "\t",
+  stringsAsFactors = FALSE
+)
+dataset_meta$has_scrna <- as.logical(dataset_meta$has_scrna)
+dataset_meta$has_spatial <- as.logical(dataset_meta$has_spatial)
+
+# Minimal mapping of dataset ids to available files
+
+dataset_files <- setNames(
+  lapply(dataset_meta$file_path, function(fp) {
+    list(full = list(seurat = fp))
+  }),
+  dataset_meta$id
+)
+
+# Data level choices limited to full dataset
+
+data_level_choices <- setNames(
+  rep(list(c("Full" = "full")), nrow(dataset_meta)),
+  dataset_meta$id
+)
+
+inDir <- "data/"
+DE_dir <- "DE_dfs/"
+cat("Working directory is:", getwd(), "\n", file = stderr())
+
+
+
 # Define the file paths for your datasets
 dataset_files <- list(
   # --------- TMKMH dataset ------------
@@ -32,7 +62,8 @@ dataset_files <- list(
       "DEGs" = "TMKMH_immune_DEGs_sig.txt",
       "VAM_df" = "TMKMH_immune_filtered_VAM_top.txt",
       "DE_by_disease" = ""
-    )
+    ),
+    "spatial_seurat" = NULL
   )
   ,
   # ----------- Tabib dataset ---------
@@ -64,7 +95,8 @@ dataset_files <- list(
       "VAM_df" = "Tabib_immune_filtered_VAM_top.txt",
       "DE_by_disease" = "Tabib_immune_DE_by_disease.txt",
       "VAM_by_disease" = "Tabib_immune_VAMcdf_DE_by_disease.txt"
-    )
+    ),
+    "spatial_seurat" = NULL
   ),
   # ------------- Gur Dataset ------------
   "gur" = list(
@@ -97,7 +129,8 @@ dataset_files <- list(
       "DE_by_disease" = "Gur_immune_DE_by_disease.txt",
       "VAM_by_disease" = "Gur_immune_VAMcdf_DE_by_disease.txt"
       
-    )
+    ),
+    "spatial_seurat" = NULL
   ),
   # -------------- Ma dataset --------------
   "ma" = list(
@@ -123,8 +156,8 @@ dataset_files <- list(
       "DEGs" = "Ma_fib_DEGs_sig.txt",
       "VAM_df" = "Ma_fib_filtered_VAM_top.txt",
       "DE_by_disease" = "Ma_fib_DE_by_disease.txt"
-    )
-    
+    ),
+    "spatial_seurat" = "2025-07-07_MaSSc_Visium_PRECAST_SingleCellPredicted_RegionsNamed_CARD.rds"
   ),
   # ------------- Khanna Dataset -------------
   "khanna" = list(
@@ -147,7 +180,8 @@ dataset_files <- list(
       "DEGs" = "Khanna_mye_DEGs_sig.txt",
       "VAM_df" = "Khanna_mye_filtered_VAM_top.txt"
       
-    )
+    ),
+    "spatial_seurat" = NULL
   )
 )
 
