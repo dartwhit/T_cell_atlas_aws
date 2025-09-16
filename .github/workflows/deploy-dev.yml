@@ -1,9 +1,9 @@
 name: Deploy DEV to EC2
 
 on:
+  workflow_dispatch:
   push:
-    branches:
-      - dev
+    branches: [ dev ]
     paths:
       - 'Dockerfile'
       - '.github/workflows/deploy-dev.yml'
