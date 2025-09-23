@@ -1,6 +1,7 @@
 library(shiny)
 library(bslib)
 library(Seurat)
+library(ggplot2)
 
 # ---------- MODULE UI ----------
 spatial_UI <- function(id) {
@@ -9,11 +10,11 @@ spatial_UI <- function(id) {
     layout_columns(
       col_widths = c(6,6),
       card(
-        card_header("UMAP (Idents)"),
+        card_header("UMAP"),
         plotOutput(ns("umap"),height=380)
       ),
       card(
-        card_header("Feature plot"),
+        card_header("Feature Plot"),
         plotOutput(ns("featureplot"),height=380)
       )
     ),
@@ -75,17 +76,24 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
 
     output$umap <- renderPlot({
       req(redn(), obj())
-      DimPlot(obj(), reduction = redn(), group.by = input$group_by)
+      p <- DimPlot(obj(), reduction = redn(), group.by = input$group_by)
+      title_text <- if (!is.null(input$group_by) && input$group_by != "") {
+        paste("UMAP colored by", input$group_by)
+      } else {
+        "UMAP"
+      }
+      p + labs(title = title_text)
     })
 
     output$featureplot <- renderPlot({
       req(obj(), input$feature)
       plot_obj <- obj()
       DefaultAssay(plot_obj) <- "SCT"
-      FeaturePlot(
+      p <- FeaturePlot(
         plot_obj, features = input$feature,
         reduction = redn()
       )
+      p + labs(title = paste("Feature:", input$feature, "on UMAP"))
     })
     
     # ---- Sample-centric dynamic grid ----
@@ -148,7 +156,14 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
             default_size <- default_pt_sizes()[s_local]
             final_size <- default_size * size_val_multiplier
             grp <- if (!is.null(input$group_by)) input$group_by else NULL
-            SpatialDimPlot(obj(), images = s_local, group.by = grp, pt.size.factor = final_size)
+            p <- SpatialDimPlot(obj(), images = s_local, group.by = grp, pt.size.factor = final_size)
+            title_text <- if (!is.null(grp) && grp != "") {
+              paste0("Sample ", s_local, " (", grp, ")")
+            } else {
+              paste0("Sample ", s_local)
+            }
+            p + labs(title = title_text) +
+              theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 14))
           })
           
           # Reactive for FeaturePlot
@@ -160,7 +175,9 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
             final_size <- default_size * size_val_multiplier
             plot_obj <- obj()
             DefaultAssay(plot_obj) <- "SCT"
-            SpatialFeaturePlot(plot_obj, images = s_local, features = input$feature, pt.size.factor = final_size)
+            p <- SpatialFeaturePlot(plot_obj, images = s_local, features = input$feature, pt.size.factor = final_size)
+            p + labs(title = paste0("Expression level of ", input$feature, " in Sample ", s_local)) +
+              theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 14))
           })
 
           # Render plots
