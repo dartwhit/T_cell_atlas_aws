@@ -7,14 +7,7 @@ explore_sidebar_UI <- function(id) {
   sidebar(
     title = "Select dataset and genes",
     position = "left",
-    selectInput(ns("study"),"Select study to explore",
-                choices = c(
-                  "TMKMH" = "tmkmh",
-                  "Tabib et al." = "tabib",
-                  "Gur et al." = "gur",
-                  "Ma et al." = "ma",
-                  "Khanna et al" = "khanna"
-                )),
+    uiOutput(ns("study_ui")),
 
     
     conditionalPanel(
@@ -78,11 +71,17 @@ explore_sidebar_UI <- function(id) {
 }
 
 # ---------- MODULE SERVER ----------
-explore_sidebar_server <- function(id, selected_study_from_gallery) {
+explore_sidebar_server <- function(id, selected_study_from_gallery, dataset_config) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
+    output$study_ui <- renderUI({
+      study_choices <- setNames(dataset_config$id, dataset_config$name)
+      selectInput(ns("study"), "Select study to explore", choices = study_choices)
+    })
+
     output$data_level_ui <- renderUI({
+      req(input$study)
       selectInput(ns("data_level"),
                   "Select data to visualize",
                   choices = data_level_choices[[input$study]])
@@ -90,12 +89,9 @@ explore_sidebar_server <- function(id, selected_study_from_gallery) {
 
     observeEvent(selected_study_from_gallery(), {
       study_info <- selected_study_from_gallery()
-      # The gallery now returns a list(id=..., view=...)
-      # We only care about the id here.
       if (is.list(study_info) && !is.null(study_info$id)) {
         updateSelectInput(session, "study", selected = study_info$id)
       } else {
-        # Fallback for old behavior if needed
         updateSelectInput(session, "study", selected = study_info)
       }
     })
