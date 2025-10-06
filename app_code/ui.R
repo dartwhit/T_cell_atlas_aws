@@ -93,43 +93,8 @@ ui <- page_navbar(
             layout_sidebar(
               sidebar = explore_sidebar_UI("explore_sidebar_module"),
               scrna_seq_UI("scrna_seq_module")
-            ),
-  ),
-  
-  nav_panel("Spatial data explorer",
-    value = "spatial",
-    bslib::page_fluid(
-    layout_sidebar(
-      sidebar = sidebar(
-        title = "Spatial data options",
-        selectInput("spatial_study_selector", "Select Study", choices = NULL),
-        selectInput(NS("sp1", "group_by"), 
-                    "Group by (metadata)", 
-                    choices = c("Seurat cluster" = "cluster",
-                    "Key regions" =  "Key_Regions"),
-                  selected = "cluster"),
-        selectizeInput(NS("sp1", "feature"), "Feature (Gene/pathway)",multiple = TRUE,
-        choices = NULL, options = list(placeholder = "Type to search…")),
-        checkboxGroupInput(NS("sp1", "samples"),
-                      "Select samples to view"
-                    )
-      ),
-      spatial_UI("sp1")
-    )
-    )
-
-  ),
-  
-  nav_spacer(),
-  nav_panel(
-    icon(
-      "calendar",
-      align = "right"
-    ) 
+            )
   )
-  
-
 )
-
 
 
