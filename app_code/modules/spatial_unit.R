@@ -26,6 +26,49 @@ spatial_UI <- function(id) {
   )
 }
 
+# ---------- SPATIAL SIDEBAR UI ----------
+spatial_sidebar_UI <- function(id) {
+  ns <- NS(id)
+  sidebar(
+    title = "Spatial Analysis Controls",
+    position = "left",
+    selectInput(ns("spatial_study_selector"), 
+               "Select study", 
+               choices = NULL),
+    selectizeInput(ns("feature"), 
+                  "Select feature to plot", 
+                  choices = NULL, 
+                  multiple = FALSE),
+    selectInput(ns("group_by"), 
+               "Color cells by", 
+               choices = c("Default" = "", 
+                         "Seurat clusters" = "seurat_clusters",
+                         "Original identity" = "orig.ident"),
+               selected = ""),
+    checkboxGroupInput(ns("samples"), 
+                      "Select samples to display", 
+                      choices = NULL)
+  )
+}
+
+# ---------- SPATIAL SIDEBAR SERVER ----------
+spatial_sidebar_server <- function(id, studies_with_spatial) {
+  moduleServer(id, function(input, output, session) {
+    
+    # Update the spatial study selector when studies change
+    observe({
+      req(studies_with_spatial())
+      updateSelectInput(session, "spatial_study_selector", choices = studies_with_spatial())
+    })
+    
+    return(
+      list(
+        spatial_study_selector = reactive(input$spatial_study_selector)
+      )
+    )
+  })
+}
+
 # ---------- MODULE SERVER ----------
 # You can pass a ready Seurat object via `spat_obj`,
 # or pass `rds_path` to load on the fly (useful for testing).

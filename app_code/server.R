@@ -25,18 +25,17 @@ server <- function(input, output,session) {
     names(dataset_files)[sapply(dataset_files, function(x) !is.null(x$spatial_seurat))]
   })
   
-  # Update the spatial study selector
-  observe({
-    updateSelectInput(session, "spatial_study_selector", choices = studies_with_spatial())
-  })
+  # Initialize spatial sidebar
+  spatial_sidebar_inputs <- spatial_sidebar_server("spatial_sidebar", 
+                                                  studies_with_spatial = studies_with_spatial)
   
   # Get the path to the selected spatial data
   spatial_data_path <- reactive({
-    req(input$spatial_study_selector)
-    paste0(inDir, dataset_files[[input$spatial_study_selector]][["spatial_seurat"]])
+    req(spatial_sidebar_inputs$spatial_study_selector())
+    paste0(inDir, dataset_files[[spatial_sidebar_inputs$spatial_study_selector()]][["spatial_seurat"]])
   })
 
-    spatial_server(
+  spatial_server(
     id = "sp1",
     rds_path = spatial_data_path
   )
@@ -60,9 +59,9 @@ server <- function(input, output,session) {
         # The explore_sidebar_module will automatically update its own study selector
       } else if (study_info$view == "spatial") {
         # Navigate to the spatial explorer page
-        nav_select("nav_page", selected = "spatial")
-        # Update the study selector on the spatial page
-        updateSelectInput(session, "spatial_study_selector", selected = study_info$id)
+        nav_select("nav_page", selected = "Spatial")
+        # Update the study selector on the spatial page (now properly namespaced)
+        updateSelectInput(session, "spatial_sidebar-spatial_study_selector", selected = study_info$id)
       }
     } else {
       # Fallback for old behavior or unexpected data
