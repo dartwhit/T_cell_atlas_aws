@@ -1,0 +1,243 @@
+name: Test Dynamic Dataset Configuration
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'app_code/setup.R'
+      - 'app_code/config/datasets.tsv'
+      - 'tests/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'app_code/setup.R'
+      - 'app_code/config/datasets.tsv'
+      - 'tests/**'
+  workflow_dispatch:
+
+jobs:
+  test-configuration:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup R
+      uses: r-lib/actions/setup-r@v2
+      with:
+        r-version: '4.3'
+        
+    - name: Setup R dependencies
+      uses: r-lib/actions/setup-r-dependencies@v2
+      with:
+        dependencies: '"hard"'
+        extra-packages: |
+          any::jsonlite
+          any::shiny
+          any::DT
+          any::ggplot2
+          any::dplyr
+          any::stringr
+          any::shinyjs
+          any::tidyr
+        
+    - name: Create mock data directory structure
+      run: |
+        mkdir -p app_code/data
+        mkdir -p app_code/data/DE_dfs
+        
+    - name: Create minimal test data files
+      run: |
+        # Create some mock RDS files to test file detection
+        cd app_code/data
+        
+        # TMKMH files
+        echo "Mock data for testing" > TMKMH_filtered_reduced_2025-06-06_VAM.rds
+        echo "Mock data for testing" > TMKMH_fib_filtered_VAM.rds
+        echo "Mock data for testing" > TMKMH_immune_filtered_VAM.rds
+        
+        # Tabib files  
+        echo "Mock data for testing" > Tabib_full_filtered_VAM.rds
+        echo "Mock data for testing" > Tabib_fib_filtered_VAM.rds
+        echo "Mock data for testing" > Tabib_immune_filtered_VAM.rds
+        
+        # Gur files
+        echo "Mock data for testing" > Gur_full_filtered_VAM.rds
+        echo "Mock data for testing" > Gur_fib_filtered_VAM.rds
+        echo "Mock data for testing" > Gur_immune_filtered_VAM.rds
+        
+        # Ma files
+        echo "Mock data for testing" > Ma_filtered_reduced_2025-01-28_VAM.rds
+        echo "Mock data for testing" > Ma_mye_filtered_VAM.rds
+        echo "Mock data for testing" > Ma_fib_filtered_VAM.rds
+        echo "Mock data for testing" > 2025-07-07_MaSSc_Visium_PRECAST_SingleCellPredicted_RegionsNamed_CARD.rds
+        
+        # Khanna files
+        echo "Mock data for testing" > Khanna_filtered_reduced_2025-01-28_VAM.rds
+        echo "Mock data for testing" > Khanna_fib_filtered_VAM.rds
+        echo "Mock data for testing" > Khanna_mye_filtered_VAM.rds
+        
+        # List created files for verification
+        ls -la
+        
+    - name: Run configuration tests
+      run: |
+        cd ${{ github.workspace }}
+        Rscript tests/test_dataset_config.R
+        
+    - name: Check test results
+      run: |
+        if [ -f app_code/test_results.json ]; then
+          echo "Test results found:"
+          cat app_code/test_results.json | head -20
+        else
+          echo "No test results file found"
+          exit 1
+        fi
+        
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results
+        path: app_code/test_results.json
+        
+    - name: Validate configuration structure
+      run: |
+        cd app_code
+        Rscript -e "
+          source('setup.R')
+          
+          # Check critical objects exist
+          stopifnot(exists('dataset_meta'))
+          stopifnot(exists('dataset_files'))
+          stopifnot(exists('data_level_choices'))
+          
+          # Validate datasets
+          expected_datasets <- c('tmkmh', 'tabib', 'gur', 'ma', 'khanna')
+          actual_datasets <- names(dataset_files)
+          missing <- expected_datasets[!expected_datasets %in% actual_datasets]
+          if (length(missing) > 0) {
+            stop('Missing datasets: ', paste(missing, collapse = ', '))
+          }
+          
+          # Validate study levels
+          for (dataset_id in expected_datasets) {
+            if (!dataset_id %in% names(data_level_choices)) {
+              stop('Missing data level choices for: ', dataset_id)
+            }
+            
+            choices <- data_level_choices[[dataset_id]]
+            if (!is.character(choices) || is.null(names(choices))) {
+              stop('Invalid choice structure for: ', dataset_id)
+            }
+            
+            if (!'full' %in% choices) {
+              stop('Missing full level for: ', dataset_id)
+            }
+          }
+          
+          cat('✅ All validation checks passed!\\n')
+        "
+        
+  test-ec2-compatibility:
+    runs-on: ubuntu-latest
+    needs: test-configuration
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup R
+      uses: r-lib/actions/setup-r@v2
+      with:
+        r-version: '4.3'
+        
+    - name: Test EC2 deployment simulation
+      run: |
+        # Simulate EC2 environment without actual data files
+        cd app_code
+        
+        # Test that setup.R handles missing files gracefully
+        Rscript -e "
+          source('setup.R')
+          
+          # Should load without crashing even if data files missing
+          cat('✅ Setup completed without crashing\\n')
+          cat('📊 Loaded datasets:', length(dataset_files), '\\n')
+          
+          # Check that missing file warnings are generated
+          cat('📋 Data level choices structure:\\n')
+          str(data_level_choices)
+          
+          cat('📁 Dataset files structure (first dataset):\\n') 
+          str(dataset_files[[1]], max.level = 2)
+        "
+        
+    - name: Test backward compatibility
+      run: |
+        cd app_code
+        Rscript -e "
+          source('setup.R')
+          
+          # Test that old module interfaces still work
+          # These are the objects that existing modules expect
+          required_objects <- c('dataset_files', 'data_level_choices', 'datasets', 'inDir', 'DE_dir')
+          
+          for (obj in required_objects) {
+            if (!exists(obj)) {
+              stop('Missing required object for backward compatibility: ', obj)
+            }
+          }
+          
+          # Test specific interface expectations
+          if (!is.list(dataset_files)) stop('dataset_files should be a list')
+          if (!is.list(data_level_choices)) stop('data_level_choices should be a list') 
+          if (!is.data.frame(datasets)) stop('datasets should be a data.frame')
+          
+          cat('✅ Backward compatibility maintained!\\n')
+        "
+        
+  lint-and-style:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository  
+      uses: actions/checkout@v4
+      
+    - name: Setup R
+      uses: r-lib/actions/setup-r@v2
+      with:
+        r-version: '4.3'
+        
+    - name: Install lintr
+      run: |
+        Rscript -e "install.packages('lintr')"
+        
+    - name: Lint R files
+      run: |
+        Rscript -e "
+          library(lintr)
+          
+          # Lint the setup.R file
+          setup_lints <- lint('app_code/setup.R')
+          if (length(setup_lints) > 0) {
+            print(setup_lints)
+            warning('Linting issues found in setup.R')
+          } else {
+            cat('✅ setup.R passes linting checks\\n')
+          }
+          
+          # Lint test files
+          test_files <- list.files('tests', pattern = '\\\\.R$', full.names = TRUE)
+          for (file in test_files) {
+            test_lints <- lint(file)
+            if (length(test_lints) > 0) {
+              cat('Linting issues in', file, ':\\n')
+              print(test_lints)
+            } else {
+              cat('✅', file, 'passes linting checks\\n')
+            }
+          }
+        "

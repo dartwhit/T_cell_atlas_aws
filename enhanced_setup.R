@@ -41,11 +41,6 @@ dataset_meta$parsed_levels <- lapply(dataset_meta$study_levels, parse_study_leve
 
 # Helper function to find actual file based on patterns
 find_file <- function(pattern, data_dir = inDir) {
-  # Return NULL for invalid patterns
-  if (is.null(pattern) || length(pattern) == 0 || pattern == "" || pattern == "NA") {
-    return(NULL)
-  }
-  
   # First try exact pattern
   if (file.exists(file.path(data_dir, pattern))) {
     return(pattern)
@@ -80,7 +75,7 @@ generate_file_paths <- function(dataset_row, study_level) {
     # Try different naming patterns for full dataset
     seurat_candidates <- c()
     
-    if (!is.na(date_pattern) && date_pattern != "" && date_pattern != "NA") {
+    if (!is.na(date_pattern) && date_pattern != "") {
       seurat_candidates <- c(
         paste0(file_base, "_filtered_reduced_", date_pattern, "_VAM.rds"),
         paste0(file_base, "_full_filtered_", date_pattern, "_VAM.rds")
@@ -92,7 +87,7 @@ generate_file_paths <- function(dataset_row, study_level) {
       paste0(file_base, "_filtered_VAM.rds")
     )
     
-    if (!is.na(alt_patterns) && alt_patterns != "" && alt_patterns != "NA") {
+    if (!is.na(alt_patterns) && alt_patterns != "") {
       seurat_candidates <- c(seurat_candidates, alt_patterns)
     }
     
@@ -104,11 +99,6 @@ generate_file_paths <- function(dataset_row, study_level) {
         seurat_file <- found_file
         break
       }
-    }
-    
-    # If no file found, use the first candidate as a placeholder
-    if (is.null(seurat_file) && length(seurat_candidates) > 0) {
-      seurat_file <- seurat_candidates[1]
     }
     
     base_files <- list(
@@ -124,12 +114,9 @@ generate_file_paths <- function(dataset_row, study_level) {
     )
     
     # Alternative VAM_df naming
-    if (!is.na(date_pattern) && date_pattern != "" && date_pattern != "NA") {
-      alt_vam <- paste0(file_base, "_filtered_reduced_", date_pattern, "_VAM_top.txt")
-      found_alt_vam <- find_file(alt_vam)
-      if (!is.null(found_alt_vam)) {
-        base_files$VAM_df <- found_alt_vam
-      }
+    alt_vam <- paste0(file_base, "_filtered_reduced_", date_pattern, "_VAM_top.txt")
+    if (!is.na(date_pattern) && find_file(alt_vam)) {
+      base_files$VAM_df <- alt_vam
     }
     
   } else {
@@ -142,6 +129,13 @@ generate_file_paths <- function(dataset_row, study_level) {
       DE_by_disease = paste0(file_base, "_", study_level, "_DE_by_disease.txt"),
       VAM_by_disease = paste0(file_base, "_", study_level, "_VAMcdf_DE_by_disease.txt")
     )
+  }
+  
+  # Validate files exist and warn about missing ones
+  for (file_type in names(base_files)) {
+    if (!is.null(base_files[[file_type]]) && !find_file(base_files[[file_type]])) {
+      cat("⚠️ Missing file for", dataset_id, study_level, file_type, ":", base_files[[file_type]], "\n", file = stderr())
+    }
   }
   
   return(base_files)
@@ -185,31 +179,4 @@ datasets <- dataset_meta
 # Print summary
 cat("✅ Enhanced setup completed. Loaded", nrow(dataset_meta), "datasets\n", file = stderr())
 cat("📁 Dataset files structure generated for:", paste(names(dataset_files), collapse = ", "), "\n", file = stderr())
-
-# Validation: Check for missing files and warn
-missing_files <- list()
-for (dataset_id in names(dataset_files)) {
-  for (level in names(dataset_files[[dataset_id]])) {
-    if (level %in% c("meta", "spatial_seurat")) next
-    level_files <- dataset_files[[dataset_id]][[level]]
-    for (file_type in names(level_files)) {
-      file_path <- level_files[[file_type]]
-      if (!is.null(file_path) && file_path != "" && !file.exists(file.path(inDir, file_path))) {
-        missing_key <- paste(dataset_id, level, file_type, sep = "_")
-        missing_files[[missing_key]] <- file.path(inDir, file_path)
-      }
-    }
-  }
-}
-
-if (length(missing_files) > 0) {
-  cat("⚠️ Missing files detected:\n", file = stderr())
-  for (i in 1:min(5, length(missing_files))) {
-    cat("  -", names(missing_files)[i], ":", missing_files[[i]], "\n", file = stderr())
-  }
-  if (length(missing_files) > 5) {
-    cat("  ... and", length(missing_files) - 5, "more files\n", file = stderr())
-  }
-} else {
-  cat("✅ All expected files found\n", file = stderr())
-}
+cat("🔍 Data level choices:", capture.output(str(data_level_choices)), "\n", file = stderr())
