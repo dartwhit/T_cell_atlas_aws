@@ -203,3 +203,6 @@ data_level_choices <- list(
             "Fibroblasts" = "fib",
             "Immune cells" = "immune")
 )
+
+# Create datasets object for sidebar module (this was missing!)
+datasets <- dataset_meta
