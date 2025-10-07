@@ -96,11 +96,13 @@ dataset_gallery_server <- function(id) {
     lapply(dataset_meta$id, function(id) {
       # Observer for scRNA-seq button
       observeEvent(input[[paste0("explore_scrna_", id)]], {
-        selected_study(list(id = id, view = "scrna"))
+        # Add timestamp to ensure value always changes
+        selected_study(list(id = id, view = "scrna", timestamp = Sys.time()))
       })
       # Observer for Spatial button
       observeEvent(input[[paste0("explore_spatial_", id)]], {
-        selected_study(list(id = id, view = "spatial"))
+        # Add timestamp to ensure value always changes
+        selected_study(list(id = id, view = "spatial", timestamp = Sys.time()))
       })
     })
 
