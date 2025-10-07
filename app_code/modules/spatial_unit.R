@@ -39,8 +39,10 @@ spatial_sidebar_UI <- function(id) {
     selectInput(ns("group_by"), 
                "Color cells by", 
                choices = c("Default" = "", 
-                         "Seurat clusters" = "seurat_clusters",
-                         "Original identity" = "orig.ident"),
+                         "Clusters" = "cluster",
+                         "Original identity" = "orig.ident",
+                         "Sample ID" = "SampleID",
+                         "Predicted labels" = "predicted_CARD_labels"),
                selected = ""),
     checkboxGroupInput(ns("samples"), 
                       "Select samples to display", 
@@ -111,18 +113,28 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL, sidebar_inputs 
 
     redn <- reactive({
       req(obj())
-      if ("umap" %in% names(obj()@reductions)) "umap" else
-              if ("UMAP" %in% names(obj()@reductions)) "UMAP" else NULL
+      if ("UMAP" %in% names(obj()@reductions)) "UMAP" else
+              if ("umap" %in% names(obj()@reductions)) "umap" else NULL
     })
 
     output$umap <- renderPlot({
       req(redn(), obj())
       group_by_val <- if (!is.null(sidebar_inputs)) sidebar_inputs$group_by() else input$group_by
-      p <- DimPlot(obj(), reduction = redn(), group.by = group_by_val)
-      title_text <- if (!is.null(group_by_val) && group_by_val != "") {
-        paste("UMAP colored by", group_by_val)
+      
+      # Handle empty or NULL group_by values
+      if (is.null(group_by_val) || group_by_val == "") {
+        p <- DimPlot(obj(), reduction = redn())
+        title_text <- "UMAP"
       } else {
-        "UMAP"
+        # Check if the group_by column exists in metadata
+        if (group_by_val %in% colnames(obj()@meta.data)) {
+          p <- DimPlot(obj(), reduction = redn(), group.by = group_by_val)
+          title_text <- paste("UMAP colored by", group_by_val)
+        } else {
+          # Fallback to no grouping if column doesn't exist
+          p <- DimPlot(obj(), reduction = redn())
+          title_text <- paste("UMAP (", group_by_val, "not found)")
+        }
       }
       p + labs(title = title_text)
     })
@@ -131,13 +143,41 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL, sidebar_inputs 
       req(obj())
       feature_val <- if (!is.null(sidebar_inputs)) sidebar_inputs$feature() else input$feature
       req(feature_val)
+      
       plot_obj <- obj()
-      DefaultAssay(plot_obj) <- "SCT"
-      p <- FeaturePlot(
-        plot_obj, features = feature_val,
-        reduction = redn()
-      )
-      p + labs(title = paste("Feature:", feature_val, "on UMAP"))
+      
+      # Use SCT assay if available, otherwise use default assay
+      if ("SCT" %in% names(plot_obj@assays)) {
+        DefaultAssay(plot_obj) <- "SCT"
+      }
+      
+      # Check if feature exists in the current assay
+      current_assay <- DefaultAssay(plot_obj)
+      available_features <- rownames(plot_obj[[current_assay]])
+      
+      if (!feature_val %in% available_features) {
+        # Try to find the feature in other assays
+        for (assay_name in names(plot_obj@assays)) {
+          if (feature_val %in% rownames(plot_obj[[assay_name]])) {
+            DefaultAssay(plot_obj) <- assay_name
+            current_assay <- assay_name
+            break
+          }
+        }
+      }
+      
+      if (feature_val %in% rownames(plot_obj[[current_assay]])) {
+        p <- FeaturePlot(
+          plot_obj, features = feature_val,
+          reduction = redn()
+        )
+        p + labs(title = paste("Feature:", feature_val, "on UMAP"))
+      } else {
+        # Create an empty plot if feature not found
+        ggplot() + 
+          labs(title = paste("Feature not found:", feature_val)) +
+          theme_void()
+      }
     })
     
     # ---- Sample-centric dynamic grid ----
@@ -202,12 +242,16 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL, sidebar_inputs 
             default_size <- default_pt_sizes()[s_local]
             final_size <- default_size * size_val_multiplier
             grp <- if (!is.null(sidebar_inputs)) sidebar_inputs$group_by() else input$group_by
-            p <- SpatialDimPlot(obj(), images = s_local, group.by = grp, pt.size.factor = final_size)
-            title_text <- if (!is.null(grp) && grp != "") {
-              paste0("Sample ", s_local, " (", grp, ")")
+            
+            # Handle empty or NULL group_by values for spatial plots
+            if (is.null(grp) || grp == "" || !grp %in% colnames(obj()@meta.data)) {
+              p <- SpatialDimPlot(obj(), images = s_local, pt.size.factor = final_size)
+              title_text <- paste0("Sample ", s_local)
             } else {
-              paste0("Sample ", s_local)
+              p <- SpatialDimPlot(obj(), images = s_local, group.by = grp, pt.size.factor = final_size)
+              title_text <- paste0("Sample ", s_local, " (", grp, ")")
             }
+            
             p + labs(title = title_text) +
               theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 14))
           })
@@ -221,10 +265,38 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL, sidebar_inputs 
             default_size <- default_pt_sizes()[s_local]
             final_size <- default_size * size_val_multiplier
             plot_obj <- obj()
-            DefaultAssay(plot_obj) <- "SCT"
-            p <- SpatialFeaturePlot(plot_obj, images = s_local, features = feature_val, pt.size.factor = final_size)
-            p + labs(title = paste0("Expression level of ", feature_val, " in Sample ", s_local)) +
-              theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 14))
+            
+            # Use SCT assay if available, otherwise use default assay
+            if ("SCT" %in% names(plot_obj@assays)) {
+              DefaultAssay(plot_obj) <- "SCT"
+            }
+            
+            # Check if feature exists in the current assay
+            current_assay <- DefaultAssay(plot_obj)
+            available_features <- rownames(plot_obj[[current_assay]])
+            
+            if (!feature_val %in% available_features) {
+              # Try to find the feature in other assays
+              for (assay_name in names(plot_obj@assays)) {
+                if (feature_val %in% rownames(plot_obj[[assay_name]])) {
+                  DefaultAssay(plot_obj) <- assay_name
+                  current_assay <- assay_name
+                  break
+                }
+              }
+            }
+            
+            if (feature_val %in% rownames(plot_obj[[current_assay]])) {
+              p <- SpatialFeaturePlot(plot_obj, images = s_local, features = feature_val, pt.size.factor = final_size)
+              p + labs(title = paste0("Expression level of ", feature_val, " in Sample ", s_local)) +
+                theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 14))
+            } else {
+              # Create an empty plot if feature not found
+              ggplot() + 
+                labs(title = paste0("Feature not found: ", feature_val, " in Sample ", s_local)) +
+                theme_void() +
+                theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 14))
+            }
           })
 
           # Render plots
