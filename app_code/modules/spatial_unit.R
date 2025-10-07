@@ -19,10 +19,7 @@ spatial_UI <- function(id) {
       )
     ),
     # Sample-centric grid of plots
-    conditionalPanel(
-      condition = paste0("input['", ns("samples"), "'] && input['", ns("samples"), "'].length > 0"),
-      uiOutput(ns("sample_centric_grid"))
-    )
+    uiOutput(ns("sample_centric_grid"))
   )
 }
 
@@ -63,7 +60,10 @@ spatial_sidebar_server <- function(id, studies_with_spatial) {
     
     return(
       list(
-        spatial_study_selector = reactive(input$spatial_study_selector)
+        spatial_study_selector = reactive(input$spatial_study_selector),
+        feature = reactive(input$feature),
+        group_by = reactive(input$group_by),
+        samples = reactive(input$samples)
       )
     )
   })
@@ -72,13 +72,17 @@ spatial_sidebar_server <- function(id, studies_with_spatial) {
 # ---------- MODULE SERVER ----------
 # You can pass a ready Seurat object via `spat_obj`,
 # or pass `rds_path` to load on the fly (useful for testing).
-spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
+spatial_server <- function(id, spat_obj = NULL, rds_path = NULL, sidebar_inputs = NULL) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
     obj <- reactive({
       if (!is.null(spat_obj)) {
-        spat_obj
+        if (is.reactive(spat_obj)) {
+          spat_obj()
+        } else {
+          spat_obj
+        }
       } else {
         req(rds_path())
         readRDS(rds_path())
@@ -105,12 +109,6 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
       })
     })
 
-    observe({
-      req(obj())
-      updateSelectizeInput(session, "feature", choices = rownames(obj()[["SCT"]]), server = TRUE)
-      updateCheckboxGroupInput(session, "samples", choices = names(obj()@images))
-    })
-
     redn <- reactive({
       req(obj())
       if ("umap" %in% names(obj()@reductions)) "umap" else
@@ -119,9 +117,10 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
 
     output$umap <- renderPlot({
       req(redn(), obj())
-      p <- DimPlot(obj(), reduction = redn(), group.by = input$group_by)
-      title_text <- if (!is.null(input$group_by) && input$group_by != "") {
-        paste("UMAP colored by", input$group_by)
+      group_by_val <- if (!is.null(sidebar_inputs)) sidebar_inputs$group_by() else input$group_by
+      p <- DimPlot(obj(), reduction = redn(), group.by = group_by_val)
+      title_text <- if (!is.null(group_by_val) && group_by_val != "") {
+        paste("UMAP colored by", group_by_val)
       } else {
         "UMAP"
       }
@@ -129,21 +128,24 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
     })
 
     output$featureplot <- renderPlot({
-      req(obj(), input$feature)
+      req(obj())
+      feature_val <- if (!is.null(sidebar_inputs)) sidebar_inputs$feature() else input$feature
+      req(feature_val)
       plot_obj <- obj()
       DefaultAssay(plot_obj) <- "SCT"
       p <- FeaturePlot(
-        plot_obj, features = input$feature,
+        plot_obj, features = feature_val,
         reduction = redn()
       )
-      p + labs(title = paste("Feature:", input$feature, "on UMAP"))
+      p + labs(title = paste("Feature:", feature_val, "on UMAP"))
     })
     
     # ---- Sample-centric dynamic grid ----
     output$sample_centric_grid <- renderUI({
-      req(length(input$samples) > 0)
+      samples_val <- if (!is.null(sidebar_inputs)) sidebar_inputs$samples() else input$samples
+      req(length(samples_val) > 0)
       
-      cards <- lapply(input$samples, function(s) {
+      cards <- lapply(samples_val, function(s) {
         safe_s <- safe_id(s)
         slider_id <- paste0("pt_", safe_s)
         dimplot_id <- paste0("sp_dim_", safe_s)
@@ -161,14 +163,14 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
             col_widths = c(6, 6),
             plotOutput(ns(dimplot_id), height = 380),
             conditionalPanel(
-              condition = paste0("input['", ns("feature"), "'] && input['", ns("feature"), "'].length > 0"),
+              condition = paste0("input['", if (!is.null(sidebar_inputs)) "spatial_sidebar-feature" else ns("feature"), "'] && input['", if (!is.null(sidebar_inputs)) "spatial_sidebar-feature" else ns("feature"), "'].length > 0"),
               plotOutput(ns(featureplot_id), height = 380)
             )
           ),
           card_footer(
             downloadButton(ns(dld_dim_id), "Download Clusters"),
             conditionalPanel(
-              condition = paste0("input['", ns("feature"), "'] && input['", ns("feature"), "'].length > 0"),
+              condition = paste0("input['", if (!is.null(sidebar_inputs)) "spatial_sidebar-feature" else ns("feature"), "'] && input['", if (!is.null(sidebar_inputs)) "spatial_sidebar-feature" else ns("feature"), "'].length > 0"),
               downloadButton(ns(dld_feat_id), "Download Features")
             )
           )
@@ -179,9 +181,10 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
     })
     
     observe({
-      req(length(input$samples) > 0, default_pt_sizes())
+      samples_val <- if (!is.null(sidebar_inputs)) sidebar_inputs$samples() else input$samples
+      req(length(samples_val) > 0, default_pt_sizes())
       
-      lapply(input$samples, function(s) {
+      lapply(samples_val, function(s) {
         safe_s <- safe_id(s)
         slider_id <- paste0("pt_", safe_s)
         dimplot_id <- paste0("sp_dim_", safe_s)
@@ -198,7 +201,7 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
             if (is.null(size_val_multiplier)) size_val_multiplier <- 1.0
             default_size <- default_pt_sizes()[s_local]
             final_size <- default_size * size_val_multiplier
-            grp <- if (!is.null(input$group_by)) input$group_by else NULL
+            grp <- if (!is.null(sidebar_inputs)) sidebar_inputs$group_by() else input$group_by
             p <- SpatialDimPlot(obj(), images = s_local, group.by = grp, pt.size.factor = final_size)
             title_text <- if (!is.null(grp) && grp != "") {
               paste0("Sample ", s_local, " (", grp, ")")
@@ -211,15 +214,16 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
           
           # Reactive for FeaturePlot
           feat_plot_reactive <- reactive({
-            req(input$feature)
+            feature_val <- if (!is.null(sidebar_inputs)) sidebar_inputs$feature() else input$feature
+            req(feature_val)
             size_val_multiplier <- input[[slider_id]]
             if (is.null(size_val_multiplier)) size_val_multiplier <- 1.0
             default_size <- default_pt_sizes()[s_local]
             final_size <- default_size * size_val_multiplier
             plot_obj <- obj()
             DefaultAssay(plot_obj) <- "SCT"
-            p <- SpatialFeaturePlot(plot_obj, images = s_local, features = input$feature, pt.size.factor = final_size)
-            p + labs(title = paste0("Expression level of ", input$feature, " in Sample ", s_local)) +
+            p <- SpatialFeaturePlot(plot_obj, images = s_local, features = feature_val, pt.size.factor = final_size)
+            p + labs(title = paste0("Expression level of ", feature_val, " in Sample ", s_local)) +
               theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 14))
           })
 

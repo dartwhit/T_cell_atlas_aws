@@ -35,9 +35,32 @@ server <- function(input, output,session) {
     paste0(inDir, dataset_files[[spatial_sidebar_inputs$spatial_study_selector()]][["spatial_seurat"]])
   })
 
+  # Load spatial object for sharing between sidebar and main module
+  spatial_obj <- reactive({
+    req(spatial_data_path())
+    readRDS(spatial_data_path())
+  })
+  
+  # Update spatial sidebar with the spatial object when it's loaded
+  observe({
+    req(spatial_obj())
+    updateSelectizeInput(
+      session, 
+      "spatial_sidebar-feature", 
+      choices = rownames(spatial_obj()[["SCT"]]), 
+      server = TRUE
+    )
+    updateCheckboxGroupInput(
+      session,
+      "spatial_sidebar-samples", 
+      choices = names(spatial_obj()@images)
+    )
+  })
+
   spatial_server(
     id = "sp1",
-    rds_path = spatial_data_path
+    spat_obj = spatial_obj,
+    sidebar_inputs = spatial_sidebar_inputs
   )
 
   options(shiny.trace = FALSE, shiny.fullstacktrace = FALSE, shiny.sanitize.errors = TRUE)
