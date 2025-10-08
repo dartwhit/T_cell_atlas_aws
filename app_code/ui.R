@@ -54,15 +54,26 @@ ui <- page_navbar(
             )
   ),
   
-  # Spatial page
+  # Spatial page with bslib page_fluid
   nav_panel("Spatial",
-  page_fluid(
-layout_sidebar(
-              sidebar = spatial_sidebar_UI("spatial_sidebar"),
-              spatial_UI("sp1")
+            page_fluid(
+              layout_columns(
+                col_widths = c(3, 9),
+                card(
+                  card_header("Spatial Analysis Controls"),
+                  card_body(
+                    spatial_sidebar_UI("spatial_sidebar")
+                  )
+                ),
+                card(
+                  full_screen = TRUE,
+                  card_body(
+                    class = "p-0",
+                    spatial_UI("sp1")
+                  )
+                )
+              )
             )
-  )
-            
   )
 )
 

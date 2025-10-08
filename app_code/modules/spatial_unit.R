@@ -6,36 +6,50 @@ library(ggplot2)
 # ---------- MODULE UI ----------
 spatial_UI <- function(id) {
   ns <- NS(id)
-  tagList(
-    layout_columns(
-      col_widths = c(6,6),
-      card(
-        card_header("UMAP"),
-        plotOutput(ns("umap"),height=380)
-      ),
-      card(
-        card_header("Feature Plot"),
-        plotOutput(ns("featureplot"),height=380)
+  div(
+    class = "h-100 overflow-auto p-3",
+    # Overview plots section
+    div(
+      class = "mb-4",
+      h4("Overview", class = "mb-3"),
+      layout_columns(
+        col_widths = c(6, 6),
+        card(
+          card_header("UMAP"),
+          card_body(
+            plotOutput(ns("umap"), height = "400px")
+          )
+        ),
+        card(
+          card_header("Feature Plot"),
+          card_body(
+            plotOutput(ns("featureplot"), height = "400px")
+          )
+        )
       )
     ),
-    # Sample-centric grid of plots
-    uiOutput(ns("sample_centric_grid"))
+    
+    # Sample-specific spatial plots - scrollable
+    div(
+      h4("Spatial Analysis by Sample", class = "mb-3"),
+      uiOutput(ns("sample_centric_grid"))
+    )
   )
 }
 
 # ---------- SPATIAL SIDEBAR UI ----------
 spatial_sidebar_UI <- function(id) {
   ns <- NS(id)
-  sidebar(
-    title = "Spatial Analysis Controls",
-    position = "left",
+  div(
     selectInput(ns("spatial_study_selector"), 
                "Select study", 
                choices = NULL),
+    
     selectizeInput(ns("feature"), 
                   "Select feature to plot", 
                   choices = NULL, 
                   multiple = FALSE),
+    
     selectInput(ns("group_by"), 
                "Color cells by", 
                choices = c("Default" = "", 
@@ -44,9 +58,13 @@ spatial_sidebar_UI <- function(id) {
                          "Sample ID" = "SampleID",
                          "Predicted labels" = "predicted_CARD_labels"),
                selected = ""),
+    
     checkboxGroupInput(ns("samples"), 
                       "Select samples to display", 
-                      choices = NULL)
+                      choices = NULL),
+    
+    hr(),
+    helpText("Select samples above to view spatial plots. Use scroll to navigate through plots.")
   )
 }
 
@@ -185,7 +203,8 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL, sidebar_inputs 
       samples_val <- if (!is.null(sidebar_inputs)) sidebar_inputs$samples() else input$samples
       req(length(samples_val) > 0)
       
-      cards <- lapply(samples_val, function(s) {
+      # Create cards for each sample - these will scroll naturally
+      sample_cards <- lapply(samples_val, function(s) {
         safe_s <- safe_id(s)
         slider_id <- paste0("pt_", safe_s)
         dimplot_id <- paste0("sp_dim_", safe_s)
@@ -193,31 +212,52 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL, sidebar_inputs 
         dld_dim_id <- paste0("dld_dim_", safe_s)
         dld_feat_id <- paste0("dld_feat_", safe_s)
         
+        # Full-width card for each sample
         card(
-          card_header(paste("Sample:", s)),
-          div(class = "px-3 py-2",
-              sliderInput(ns(slider_id), "Relative point size",
-                          min = 0.2, max = 1.5, value = 1, step = 0.05)
+          class = "mb-4",
+          card_header(
+            div(
+              class = "d-flex justify-content-between align-items-center",
+              h5(paste("Sample:", s), class = "mb-0 text-primary"),
+              sliderInput(ns(slider_id), "Point size",
+                         min = 0.2, max = 1.5, value = 1, step = 0.05,
+                         width = "200px")
+            )
           ),
-          layout_columns(
-            col_widths = c(6, 6),
-            plotOutput(ns(dimplot_id), height = 380),
-            conditionalPanel(
-              condition = paste0("input['", if (!is.null(sidebar_inputs)) "spatial_sidebar-feature" else ns("feature"), "'] && input['", if (!is.null(sidebar_inputs)) "spatial_sidebar-feature" else ns("feature"), "'].length > 0"),
-              plotOutput(ns(featureplot_id), height = 380)
+          card_body(
+            layout_columns(
+              col_widths = c(6, 6),
+              div(
+                h6("Spatial Clusters/Groups", class = "mb-2"),
+                plotOutput(ns(dimplot_id), height = "500px")
+              ),
+              conditionalPanel(
+                condition = paste0("input['", if (!is.null(sidebar_inputs)) "spatial_sidebar-feature" else ns("feature"), "'] && input['", if (!is.null(sidebar_inputs)) "spatial_sidebar-feature" else ns("feature"), "'].length > 0"),
+                div(
+                  h6("Feature Expression", class = "mb-2"),
+                  plotOutput(ns(featureplot_id), height = "500px")
+                )
+              )
             )
           ),
           card_footer(
-            downloadButton(ns(dld_dim_id), "Download Clusters"),
+            class = "text-center",
+            downloadButton(ns(dld_dim_id), "Download Clusters", 
+                          class = "btn btn-outline-primary me-2"),
             conditionalPanel(
               condition = paste0("input['", if (!is.null(sidebar_inputs)) "spatial_sidebar-feature" else ns("feature"), "'] && input['", if (!is.null(sidebar_inputs)) "spatial_sidebar-feature" else ns("feature"), "'].length > 0"),
-              downloadButton(ns(dld_feat_id), "Download Features")
+              downloadButton(ns(dld_feat_id), "Download Features", 
+                            class = "btn btn-outline-secondary")
             )
           )
         )
       })
       
-      do.call(layout_columns, c(list(col_widths = rep(6, length(cards))), cards))
+      # Return cards in a scrollable container
+      div(
+        class = "spatial-samples-container",
+        do.call(tagList, sample_cards)
+      )
     })
     
     observe({
