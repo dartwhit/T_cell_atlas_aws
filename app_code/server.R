@@ -139,25 +139,7 @@ server <- function(input, output,session) {
   # deleteFile = FALSE)
   
   
-  observeEvent(input$explore_Tabib,{
-    updateSelectInput(session, "study", selected = "tabib")
-  })
-  
-  observeEvent(input$explore_Gur,{
-    updateSelectInput(session, "study", selected = "gur")
-  })
-  
-  observeEvent(input$explore_Ma,{
-    updateSelectInput(session, "study", selected = "ma")
-  })
-  
-  observeEvent(input$explore_Khanna,{
-    updateSelectInput(session, "study", selected = "khanna")
-  })
-  
-  observeEvent(input$explore_tmkmh,{
-    updateSelectInput(session, "study", selected = "tmkmh")
-  })
+
 
   ################################## Explore page #################################
   scrna_data <- scrna_seq_server(
