@@ -56,10 +56,13 @@ ui <- page_navbar(
   
   # Spatial page
   nav_panel("Spatial",
-            layout_sidebar(
+  page_fluid(
+layout_sidebar(
               sidebar = spatial_sidebar_UI("spatial_sidebar"),
               spatial_UI("sp1")
             )
+  )
+            
   )
 )
 
