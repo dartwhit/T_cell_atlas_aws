@@ -2,17 +2,19 @@ name: Test Dynamic Dataset Configuration
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, dev ]
     paths:
       - 'app_code/setup.R'
       - 'app_code/config/datasets.tsv'
       - 'tests/**'
+      - '.github/workflows/test-dynamic-config.yml'
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop, dev ]
     paths:
       - 'app_code/setup.R'
       - 'app_code/config/datasets.tsv'
       - 'tests/**'
+      - '.github/workflows/test-dynamic-config.yml'
   workflow_dispatch:
 
 jobs:
