@@ -1,6 +1,0 @@
-id	name	assay	n_cells	image	desc	has_scrna	has_spatial	study_levels	file_patterns	spatial_file	meta_file
-tmkmh	TMKMH integrated dataset	RNA	173299	imgs/TMKMH_img.png	Integrated dataset from TMKMH study.	TRUE	FALSE	full,fib,immune	TMKMH	NA	NA
-tabib	Tabib et al. 2021	RNA	40338	imgs/Tabib_img.png	Myofibroblast transcriptome indicates SFRP2hi fibroblast progenitors in systemic sclerosis skin.	TRUE	FALSE	full,fib,immune	Tabib	NA	Tabib_metadata.txt
-gur	Gur et al. 2022	RNA	26713	imgs/Gur_img.png	Gur dataset.	TRUE	FALSE	full,fib,immune	Gur	NA	Gur_metadata.txt
-ma	Ma et al. 2024	RNA	73926	imgs/Ma_img.png	Ma dataset.	TRUE	TRUE	full,mye,fib	Ma	2025-07-07_MaSSc_Visium_PRECAST_SingleCellPredicted_RegionsNamed_CARD.rds	NA
-khanna	Khanna et al. 2022	RNA	34915	imgs/Khanna_img.png	Khanna dataset.	TRUE	FALSE	full,fib,mye	Khanna	NA	NA
