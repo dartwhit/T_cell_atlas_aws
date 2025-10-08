@@ -1,0 +1,72 @@
+name: Test Dynamic Config (On Demand)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ dev, main, develop ]
+
+jobs:
+  quick-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup R
+      uses: r-lib/actions/setup-r@v2
+      with:
+        r-version: '4.3'
+        
+    - name: Install R dependencies
+      run: |
+        Rscript -e "install.packages(c('jsonlite', 'shiny'), repos = 'http://cran.us.r-project.org')"
+        
+    - name: Create minimal test data
+      run: |
+        mkdir -p app_code/data
+        cd app_code/data
+        # Create some mock files to test detection
+        echo "mock" > TMKMH_fib_filtered_VAM.rds
+        echo "mock" > TMKMH_immune_filtered_VAM.rds
+        echo "mock" > 2025-07-07_MaSSc_Visium_PRECAST_SingleCellPredicted_RegionsNamed_CARD.rds
+        ls -la
+        
+    - name: Test dynamic configuration loading
+      run: |
+        cd app_code
+        Rscript -e "
+          cat('🧪 Testing Dynamic Configuration\\n')
+          tryCatch({
+            source('setup.R')
+            cat('✅ Setup loaded successfully\\n')
+            cat('📊 Datasets loaded:', length(dataset_files), '\\n')
+            cat('🎯 Study levels for first dataset:', names(data_level_choices[[1]]), '\\n')
+          }, error = function(e) {
+            cat('❌ Error:', e$message, '\\n')
+            quit(status = 1)
+          })
+        "
+        
+    - name: Validate structure
+      run: |
+        cd app_code
+        Rscript -e "
+          source('setup.R')
+          
+          # Validate core objects exist
+          stopifnot(exists('dataset_meta'))
+          stopifnot(exists('dataset_files'))
+          stopifnot(exists('data_level_choices'))
+          stopifnot(exists('datasets'))
+          
+          # Validate expected datasets
+          expected <- c('tmkmh', 'tabib', 'gur', 'ma', 'khanna')
+          actual <- names(dataset_files)
+          missing <- expected[!expected %in% actual]
+          if (length(missing) > 0) {
+            stop('Missing datasets: ', paste(missing, collapse = ', '))
+          }
+          
+          cat('🎉 All validation checks passed!\\n')
+        "
