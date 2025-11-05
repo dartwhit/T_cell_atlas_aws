@@ -25,10 +25,33 @@ test_ui <- bslib::page_fluid(
 )
 
 test_server <- function(input, output, session) {
+  # Load the spatial object
+  spat_obj <- reactive({
+    readRDS("../data/spat_Li_RCTD_TMKMHdecon.rds")
+  })
+  
+  # Populate feature choices (genes)
+  observe({
+    req(spat_obj())
+    assay <- if ("SCT" %in% names(spat_obj()@assays)) "SCT" else DefaultAssay(spat_obj())
+    genes <- rownames(spat_obj()[[assay]])
+    updateSelectizeInput(session, NS("sp1", "feature"), 
+                        choices = genes, 
+                        server = TRUE)
+  })
+  
+  # Populate sample choices
+  observe({
+    req(spat_obj())
+    samples <- names(spat_obj()@images)
+    updateCheckboxGroupInput(session, NS("sp1", "samples"),
+                             choices = samples,
+                             selected = samples[1])
+  })
+  
   spatial_server(
     id = "sp1",
-    # Option A: pass a path for quick testing
-    rds_path = reactive("../data/2025-07-07_MaSSc_Visium_PRECAST_SingleCellPredicted_RegionsNamed_CARD.rds")
+    spat_obj = spat_obj
   )
 }
 

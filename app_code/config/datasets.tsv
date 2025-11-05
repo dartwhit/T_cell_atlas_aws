@@ -4,4 +4,5 @@ tabib	Tabib et al. 2021	RNA	40338	imgs/Tabib_img.png	Myofibroblast transcriptome
 gur	Gur et al. 2022	RNA	26713	imgs/Gur_img.png	Gur dataset.	TRUE	FALSE	full:Full;fib:Fibroblasts;immune:Immune cells	Gur	NA	Gur_metadata.txt	NA	Gur_full_filtered_VAM.rds
 ma	Ma et al. 2024	RNA	73926	imgs/Ma_img.png	Ma dataset.	TRUE	TRUE	full:Full;mye:Myeloid cells;fib:Fibroblasts	Ma	2025-07-07_MaSSc_Visium_PRECAST_SingleCellPredicted_RegionsNamed_CARD.rds	NA	2025-01-28	Ma_filtered_reduced_*_VAM.rds
 khanna	Khanna et al. 2022	RNA	34915	imgs/Khanna_img.png	Khanna dataset.	TRUE	FALSE	full:Full;fib:Fibroblasts;mye:Myeloid cells	Khanna	NA	NA	2025-01-28	Khanna_filtered_reduced_*_VAM.rds
+li	Li et al.	Spatial	6379	imgs/Li_img.png	Spatial transcriptomics dataset with RCTD deconvolution.	FALSE	TRUE	spatial:Spatial Analysis	Li	spat_Li_RCTD_TMKMHdecon.rds	NA	NA	NA
 spatial_only_study	Spatial Only Study 2024	Spatial	25000	imgs/spatial_study.png	Pure spatial transcriptomics dataset without scRNA-seq component	FALSE	TRUE	spatial:Spatial Analysis	SpatialStudy	SpatialStudy_processed_data.rds	SpatialStudy_metadata.txt	2024-11-15	NA
