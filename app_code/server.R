@@ -1,6 +1,7 @@
 cat("✅ server.R initialized at", Sys.time(), "\n", file = stderr())
 
 library(shiny)
+library(shinymanager)
 library(Seurat)
 library(DT)
 library(ggplot2)
@@ -19,6 +20,18 @@ options(shiny.trace = TRUE)
 
 # Define server logic required to draw a histogram
 server <- function(input, output,session) {
+  # Connect to the credentials db
+  res_auth <- secure_server(
+    check_credentials = check_credentials(
+      db = "data/auth.sqlite",
+      passphrase = "supersecretkey"
+    )
+  )
+
+  output$welcome <- renderText(paste("Welcome,", res_auth$user))
+
+
+
   # Get studies with spatial data
   studies_with_spatial <- reactive({
     names(dataset_files)[sapply(dataset_files, function(x) !is.null(x$spatial_seurat))]
