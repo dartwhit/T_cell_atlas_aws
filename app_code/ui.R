@@ -205,7 +205,6 @@ ui <- page_navbar(
     )
 
   ),
-  
   nav_spacer(),
   nav_panel(
     icon(
@@ -218,5 +217,6 @@ ui <- page_navbar(
 )
 
 # Wrap UI with shinymanager authentication
-ui <- secure_app(ui)
+ui <- secure_app(ui, enable_admin = TRUE)
+
 
