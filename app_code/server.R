@@ -24,10 +24,11 @@ server <- function(input, output,session) {
   cat("Shinymanager DB (app):", db_path, "\n")
   # Connect to the credentials db
   res_auth <- secure_server(
-    check_credentials = check_credentials(
-      db = db_path,
-      passphrase = "supersecretkey"
-    )
+    read_db_decrypt(
+    conn = 'users_lab.db',
+    name = 'credentials'
+  )
+  
   )
 
   output$welcome <- renderText(paste("Welcome,", res_auth$user))
