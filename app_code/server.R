@@ -25,7 +25,7 @@ server <- function(input, output,session) {
   # Connect to the credentials db
   res_auth <- secure_server(
     read_db_decrypt(
-    conn = 'users_lab.db',
+    conn = db_path,
     name = 'credentials'
   )
   
