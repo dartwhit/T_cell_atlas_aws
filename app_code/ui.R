@@ -206,6 +206,7 @@ ui <- page_navbar(
 
   ),
   nav_spacer(),
+  nav_item(textOutput("welcome")),
   nav_panel(
     icon(
       "calendar",
