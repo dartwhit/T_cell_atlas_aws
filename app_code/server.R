@@ -19,15 +19,18 @@ options(shiny.trace = TRUE)
 
 
 # Define server logic required to draw a histogram
-server <- function(input, output,session) {
+server <- function(input, output, session) {
   db_path <- "/srv/shiny-server/atlas/data/users_lab.db"  # absolute! not relative
   cat("Shinymanager DB (app):", db_path, "\n")
+  
   # Connect to the credentials db
+  credentials <- read_db_decrypt(
+    conn = db_path,
+    name = 'credentials'
+  )
+  
   res_auth <- secure_server(
-    check_credentials = read_db_decrypt(
-      conn = db_path,
-      name = 'credentials'
-    )
+    check_credentials = credentials
   )
 
   output$welcome <- renderText(paste("Welcome,", res_auth$user))
