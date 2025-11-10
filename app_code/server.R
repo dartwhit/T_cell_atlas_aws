@@ -20,7 +20,7 @@ options(shiny.trace = TRUE)
 
 # Define server logic required to draw a histogram
 server <- function(input, output,session) {
-  db_path <- "/srv/shiny-server/atlas/data/auth.sqlite"  # absolute! not relative
+  db_path <- "/srv/shiny-server/atlas/data/users_lab.db"  # absolute! not relative
   cat("Shinymanager DB (app):", db_path, "\n")
   # Connect to the credentials db
   res_auth <- secure_server(
