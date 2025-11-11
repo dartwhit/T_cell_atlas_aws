@@ -23,15 +23,10 @@ server <- function(input, output, session) {
   db_path <- "/srv/shiny-server/atlas/data/users_lab.sqlite"  # absolute! not relative
   cat("Shinymanager DB (app):", db_path, "\n")
   
-  # Connect to the credentials db
-  credentials <- read_db_decrypt(
-    conn = db_path,
-    name = 'credentials'
-  )
-  
+
   res_auth <- secure_server(
-    check_credentials = credentials
-  )
+       check_credentials = check_credentials(db = db_path)
+     )
 
   output$welcome <- renderText(paste("Welcome,", res_auth$user))
 
