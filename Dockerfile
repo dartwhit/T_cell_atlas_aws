@@ -23,7 +23,12 @@ COPY shiny-server.conf /etc/shiny-server/shiny-server.conf
 RUN mkdir -p /var/log/shiny-server && \
     chown -R shiny:shiny /var/log/shiny-server && \
     mkdir -p /srv/shiny-server/atlas/app_cache && \
-    chmod 777 /srv/shiny-server/atlas/app_cache
+    chmod 777 /srv/shiny-server/atlas/app_cache && \
+    mkdir -p /srv/shiny-server/atlas/data && \
+    chown -R shiny:shiny /srv/shiny-server/atlas/data && \
+    chmod 755 /srv/shiny-server/atlas/data && \
+    find /srv/shiny-server/atlas/data -type f -name "*.sqlite*" -exec chmod 664 {} \; && \
+    find /srv/shiny-server/atlas/data -type f -name "*.db" -exec chmod 664 {} \;
 
 
 # Expose Shiny port
