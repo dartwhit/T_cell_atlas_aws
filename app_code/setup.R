@@ -7,7 +7,8 @@ cat("Working directory is:", getwd(), "\n", file = stderr())
 dataset_meta <- read.delim(
   file.path("config", "datasets.tsv"),
   sep = "\t",
-  stringsAsFactors = FALSE
+  stringsAsFactors = FALSE,
+  comment.char = "#"
 )
 dataset_meta$has_scrna <- as.logical(dataset_meta$has_scrna)
 dataset_meta$has_spatial <- as.logical(dataset_meta$has_spatial)
