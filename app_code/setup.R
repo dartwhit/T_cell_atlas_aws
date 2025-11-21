@@ -4,6 +4,7 @@ cat("Working directory is:", getwd(), "\n", file = stderr())
 
 
 
+
 dataset_meta <- read.delim(
   file.path("config", "datasets.tsv"),
   sep = "\t",
@@ -44,3 +45,6 @@ for (i in 1:nrow(dataset_meta)) {
     data_level_choices[[dataset_id]] <- c("Full" = "full")
   }
 }
+
+# Create a named vector of dataset choices for use in UI dropdowns
+dataset_choices <- setNames(dataset_meta$id, dataset_meta$name)

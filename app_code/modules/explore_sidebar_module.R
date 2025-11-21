@@ -2,19 +2,13 @@ library(shiny)
 library(shinyWidgets)
 
 # ---------- MODULE UI ----------
-explore_sidebar_UI <- function(id) {
+explore_sidebar_UI <- function(id, choices) {
   ns <- NS(id)
   sidebar(
     title = "Select dataset and genes",
     position = "left",
     selectInput(ns("study"),"Select study to explore",
-                choices = c(
-                  "TMKMH" = "tmkmh",
-                  "Tabib et al." = "tabib",
-                  "Gur et al." = "gur",
-                  "Ma et al." = "ma",
-                  "Khanna et al" = "khanna"
-                )),
+                choices = choices),
 
     
     conditionalPanel(

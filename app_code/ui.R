@@ -156,7 +156,7 @@ ui <- page_navbar(
   # Explore page
     nav_panel("Explore",
             layout_sidebar(
-              sidebar = explore_sidebar_UI("explore_sidebar_module"),
+              sidebar = explore_sidebar_UI("explore_sidebar_module", choices = dataset_choices),
               navset_tab(
                 id = "explore_tabs",
                 nav_panel(title = "Plots",
