@@ -379,6 +379,19 @@ server <- function(input, output, session) {
   })
   
   
+  # Make UMAP visualization options mutually exclusive
+  observeEvent(input$split_by_disease, {
+    if (input$split_by_disease) {
+      updateCheckboxInput(session, "color_by_disease", value = FALSE)
+    }
+  })
+  
+  observeEvent(input$color_by_disease, {
+    if (input$color_by_disease) {
+      updateCheckboxInput(session, "split_by_disease", value = FALSE)
+    }
+  })
+  
   # ------------ UMAP of the full dataset ---------------
   full_umap <- reactive({
     req(seurat_obj())
