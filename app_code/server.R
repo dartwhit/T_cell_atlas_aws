@@ -381,20 +381,21 @@ server <- function(input, output, session) {
   
   # Make UMAP visualization options mutually exclusive
   observeEvent(input$split_by_disease, {
-    if (input$split_by_disease) {
+    if (isTRUE(input$split_by_disease) && isTRUE(input$color_by_disease)) {
       updateCheckboxInput(session, "color_by_disease", value = FALSE)
     }
-  })
+  }, ignoreInit = TRUE)
   
   observeEvent(input$color_by_disease, {
-    if (input$color_by_disease) {
+    if (isTRUE(input$color_by_disease) && isTRUE(input$split_by_disease)) {
       updateCheckboxInput(session, "split_by_disease", value = FALSE)
     }
-  })
+  }, ignoreInit = TRUE)
   
   # ------------ UMAP of the full dataset ---------------
   full_umap <- reactive({
     req(seurat_obj())
+    req(input$split_by_disease, input$color_by_disease)
     
     obj <- seurat_obj()
     
@@ -409,14 +410,14 @@ server <- function(input, output, session) {
     has_disease <- "Disease" %in% colnames(obj@meta.data)
     
     # Handle different visualization modes
-    if (input$split_by_disease && has_disease) {
+    if (isTRUE(input$split_by_disease) && has_disease) {
       # Split by disease status (side-by-side UMAPs)
       if (!is.null(group_var)) {
         DimPlot(obj, group.by = group_var, split.by = "Disease", ncol = 2)
       } else {
         DimPlot(obj, split.by = "Disease", ncol = 2)
       }
-    } else if (input$color_by_disease && has_disease) {
+    } else if (isTRUE(input$color_by_disease) && has_disease) {
       # Color by disease status
       DimPlot(obj, group.by = "Disease")
     } else {
