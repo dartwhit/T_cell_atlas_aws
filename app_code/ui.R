@@ -34,18 +34,17 @@ card_feature <-card("Featureplot of selected genes",
 )
 # UMAP
 card_umap <- card("UMAP of the dataset",
-                    card_body(
-                      layout_columns(
-                        col_widths = c(6, 6),
-                        checkboxInput("split_by_disease", "Split by disease status", value = FALSE),
-                        checkboxInput("color_by_disease", "Color by disease status", value = FALSE)
-                      ),
-                      downloadablePlotUI(id                 = "umap_dld", 
-                                         downloadtypes      = c("png"), 
-                                         download_hovertext = "Download the umap here!",
-                                         height             = "500px", 
-                                         btn_halign         = "left")
-                    )
+                        # withSpinner(
+                        #   plotOutput("full_umap")
+                        # )
+
+                    downloadablePlotUI(id                 = "umap_dld", 
+                                       downloadtypes      = c("png"), 
+                                       download_hovertext = "Download the umap here!",
+                                       height             = "500px", 
+                                       btn_halign         = "left")
+                  
+                  
 )
 
 # Expression of queried genes
