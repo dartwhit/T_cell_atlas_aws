@@ -434,13 +434,8 @@ server <- function(input, output, session) {
         
       }
     }
-    if (!sidebar_inputs$use_textinput_VAM() && length(sidebar_inputs$pathway_select()) > 0) {
+    if (length(sidebar_inputs$pathway_select()) > 0) {
       return(sidebar_inputs$pathway_select())
-    } else if (sidebar_inputs$use_textinput_VAM() && nchar(sidebar_inputs$pathway_input()) > 0) {
-      # Splitting by comma, tab, space, or newline
-      pathways <- unlist(strsplit(sidebar_inputs$pathway_input(), "[,\n]+"))
-      pathways <- pathways[pathways != ""]  # Remove any empty strings
-      return(pathways)
     } else {
       return(NULL)
     }
