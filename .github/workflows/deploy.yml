@@ -11,6 +11,8 @@ on:
     branches: [ main ]
     paths:
       - 'Dockerfile'
+      - 'docker-compose.yml'
+      - 'nginx.conf'
       - '.github/workflows/deploy.yml'
       - 'app_code/**'
       - 'shiny-server.conf'
@@ -36,36 +38,31 @@ jobs:
             git reset --hard origin/main
             git clean -xdf
 
-            echo "🧹 Removing existing prod container (if any)..."
-            docker rm -f atlas || true
+            echo "🧹 Stopping existing containers..."
+            docker-compose down || true
 
-            echo "🔍 Freeing port 3839 if used..."
-            CONTAINER_ID=$(docker ps --filter "publish=3839" --format "{{.ID}}")
+            echo "🔍 Freeing port 80 if used..."
+            CONTAINER_ID=$(docker ps --filter "publish=80" --format "{{.ID}}")
             if [ -n "${CONTAINER_ID:-}" ]; then
               docker stop "$CONTAINER_ID" || true
               docker rm "$CONTAINER_ID" || true
             fi
 
-            echo "🛠 Rebuilding prod image..."
-            docker build --no-cache -t atlas:prod .
+            echo "🛠 Building images..."
+            docker-compose build --no-cache
 
-            echo "🚀 Running new prod container..."
-            docker run -d \
-              --name atlas \
-              --restart unless-stopped \
-              -p 3839:3838 \
-              -e SHINY_LOG_STDERR=1 \
-              -v /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:rw \
-              -v /home/ubuntu/atlas/logs/prod:/var/log/shiny-server \
-              atlas:prod
+            echo "🚀 Starting multi-container stack..."
+            docker-compose up -d
 
             echo "🩺 Health check..."
-            sleep 3
-            if ! curl -sSf http://localhost:3839/atlas/ >/dev/null; then
+            sleep 10
+            if ! curl -sSf http://localhost/atlas/ >/dev/null; then
               echo "❌ Health check failed. Container logs:" >&2
-              docker logs --tail=200 atlas || true
+              docker-compose logs --tail=200 || true
               exit 1
             fi
+
+            echo "✅ Deployed successfully with $(docker-compose ps -q | wc -l) containers"
 
             # Optional: reclaim space from old dangling images
             docker image prune -f || true
