@@ -39,7 +39,7 @@ jobs:
             git clean -xdf
 
             echo "🧹 Stopping existing containers..."
-            docker-compose down || true
+            docker compose down || true
 
             echo "🔍 Freeing port 80 if used..."
             CONTAINER_ID=$(docker ps --filter "publish=80" --format "{{.ID}}")
@@ -49,20 +49,20 @@ jobs:
             fi
 
             echo "🛠 Building images..."
-            docker-compose build --no-cache
+            docker compose build --no-cache
 
             echo "🚀 Starting multi-container stack..."
-            docker-compose up -d
+            docker compose up -d
 
             echo "🩺 Health check..."
             sleep 10
             if ! curl -sSf http://localhost/atlas/ >/dev/null; then
               echo "❌ Health check failed. Container logs:" >&2
-              docker-compose logs --tail=200 || true
+              docker compose logs --tail=200 || true
               exit 1
             fi
 
-            echo "✅ Deployed successfully with $(docker-compose ps -q | wc -l) containers"
+            echo "✅ Deployed successfully with $(docker compose ps -q | wc -l) containers"
 
             # Optional: reclaim space from old dangling images
             docker image prune -f || true
