@@ -1,74 +1,32 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  nginx:
-    image: nginx:alpine
-    container_name: tcell_atlas_nginx
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - shiny-app-1
-      - shiny-app-2
-      - shiny-app-3
-    restart: unless-stopped
-    networks:
-      - tcell-network
-
   shiny-app-1:
     build: .
     container_name: tcell_atlas_app_1
-    expose:
-      - "3838"
+    restart: always
+    ports:
+      - "8001:3838"   # host:container
     volumes:
-      - /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:rw
-      - shiny-logs-1:/var/log/shiny-server
-      - shiny-cache-1:/srv/shiny-server/atlas/app_cache
-    restart: unless-stopped
-    networks:
-      - tcell-network
-    environment:
-      - INSTANCE_ID=app-1
+      - ./app_code:/srv/shiny-server/app:ro
+      - ./data:/srv/shiny-server/data:ro
 
   shiny-app-2:
     build: .
     container_name: tcell_atlas_app_2
-    expose:
-      - "3838"
+    restart: always
+    ports:
+      - "8002:3838"
     volumes:
-      - /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:rw
-      - shiny-logs-2:/var/log/shiny-server
-      - shiny-cache-2:/srv/shiny-server/atlas/app_cache
-    restart: unless-stopped
-    networks:
-      - tcell-network
-    environment:
-      - INSTANCE_ID=app-2
+      - ./app_code:/srv/shiny-server/app:ro
+      - ./data:/srv/shiny-server/data:ro
 
   shiny-app-3:
     build: .
     container_name: tcell_atlas_app_3
-    expose:
-      - "3838"
+    restart: always
+    ports:
+      - "8003:3838"
     volumes:
-      - /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:rw
-      - shiny-logs-3:/var/log/shiny-server
-      - shiny-cache-3:/srv/shiny-server/atlas/app_cache
-    restart: unless-stopped
-    networks:
-      - tcell-network
-    environment:
-      - INSTANCE_ID=app-3
-
-volumes:
-  shiny-logs-1:
-  shiny-logs-2:
-  shiny-logs-3:
-  shiny-cache-1:
-  shiny-cache-2:
-  shiny-cache-3:
-
-networks:
-  tcell-network:
-    driver: bridge
+      - ./app_code:/srv/shiny-server/app:ro
+      - ./data:/srv/shiny-server/data:ro
