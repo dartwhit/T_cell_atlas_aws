@@ -29,6 +29,7 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script_stop: true
+          command_timeout: 30m
           script: |
             set -euo pipefail
 
@@ -55,7 +56,7 @@ jobs:
             fi
 
             echo "🛠 Building images..."
-            docker-compose build --no-cache
+            docker-compose build
 
             echo "🚀 Starting multi-container stack..."
             docker-compose up -d
