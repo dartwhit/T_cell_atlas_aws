@@ -8,10 +8,9 @@ services:
     ports:
       - "8001:3838"   # host:container
     volumes:
-      - /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro \ 
-      - /home/ubuntu/atlas/logs/prod:/var/log/shiny-server \
+      - /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro
+      - /home/ubuntu/atlas/logs/prod:/var/log/shiny-server
       - /home/ubuntu/atlas/data/users_current.sqlite:/srv/shiny-server/data/users_current.sqlite   # ✅ rw file mount
-              -v 
 
   shiny-app-2:
     build: .
@@ -20,8 +19,8 @@ services:
     ports:
       - "8002:3838"
     volumes:
-      - /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro \ 
-      - /home/ubuntu/atlas/logs/prod:/var/log/shiny-server \
+      - /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro
+      - /home/ubuntu/atlas/logs/prod:/var/log/shiny-server
       - /home/ubuntu/atlas/data/users_current.sqlite:/srv/shiny-server/data/users_current.sqlite   # ✅ rw file mount
 
   shiny-app-3:
@@ -31,7 +30,7 @@ services:
     ports:
       - "8003:3838"
     volumes:
-      - /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro \ 
-      - /home/ubuntu/atlas/logs/prod:/var/log/shiny-server \
+      - /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro
+      - /home/ubuntu/atlas/logs/prod:/var/log/shiny-server
       - /home/ubuntu/atlas/data/users_current.sqlite:/srv/shiny-server/data/users_current.sqlite   # ✅ rw file mount
 
