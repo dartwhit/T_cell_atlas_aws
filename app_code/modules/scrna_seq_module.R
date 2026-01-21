@@ -116,7 +116,7 @@ scrna_seq_server <- function(id, sidebar_inputs, dataset_files, inDir) {
           }
         } else {
           paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DEGs"]])
-        }f
+        }
       } else {
         if (sidebar_inputs$data_level() == "full") {
           if (sidebar_inputs$anno() == TRUE) {
