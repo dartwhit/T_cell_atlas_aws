@@ -116,7 +116,7 @@ scrna_seq_server <- function(id, sidebar_inputs, dataset_files, inDir) {
           }
         } else {
           paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DEGs"]])
-        }
+        }f
       } else {
         if (sidebar_inputs$data_level() == "full") {
           if (sidebar_inputs$anno() == TRUE) {
@@ -567,7 +567,7 @@ scrna_seq_server <- function(id, sidebar_inputs, dataset_files, inDir) {
             VlnPlot(curr_obj, 
                     features = feature_names, 
                     assay = assay_to_use,
-                    split.by = "Disease", 
+                    split.by = "Disgnosis", 
                     split.plot = TRUE,
                     pt.size = 0,
                     cols = c("HC" = "#cb07a4ff", "SSc" = "#09b646ff"))
