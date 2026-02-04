@@ -1,36 +1,111 @@
 version: "3.8"
 
 services:
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx-logs:/var/log/nginx
+    depends_on:
+      shiny-app-1:
+        condition: service_healthy
+      shiny-app-2:
+        condition: service_healthy
+      shiny-app-3:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - shiny-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   shiny-app-1:
     build: .
     container_name: tcell_atlas_app_1
-    restart: always
-    ports:
-      - "8001:3838"   # host:container
+    restart: unless-stopped
+    environment:
+      - SHINY_LOG_LEVEL=INFO
+      - CONTAINER_NAME=shiny-app-1
     volumes:
       - /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro
-      - /home/ubuntu/atlas/logs/prod:/var/log/shiny-server
-      - /home/ubuntu/atlas/data/users_current.sqlite:/srv/shiny-server/data/users_current.sqlite   # ✅ rw file mount
+      - shiny-logs-1:/var/log/shiny-server
+      - /home/ubuntu/atlas/data/users_current.sqlite:/srv/shiny-server/data/users_current.sqlite
+    networks:
+      - shiny-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3838/atlas/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   shiny-app-2:
     build: .
     container_name: tcell_atlas_app_2
-    restart: always
-    ports:
-      - "8002:3838"
+    restart: unless-stopped
+    environment:
+      - SHINY_LOG_LEVEL=INFO
+      - CONTAINER_NAME=shiny-app-2
     volumes:
       - /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro
-      - /home/ubuntu/atlas/logs/prod:/var/log/shiny-server
-      - /home/ubuntu/atlas/data/users_current.sqlite:/srv/shiny-server/data/users_current.sqlite   # ✅ rw file mount
+      - shiny-logs-2:/var/log/shiny-server
+      - /home/ubuntu/atlas/data/users_current.sqlite:/srv/shiny-server/data/users_current.sqlite
+    networks:
+      - shiny-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3838/atlas/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   shiny-app-3:
     build: .
     container_name: tcell_atlas_app_3
-    restart: always
-    ports:
-      - "8003:3838"
+    restart: unless-stopped
+    environment:
+      - SHINY_LOG_LEVEL=INFO
+      - CONTAINER_NAME=shiny-app-3
     volumes:
       - /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro
-      - /home/ubuntu/atlas/logs/prod:/var/log/shiny-server
-      - /home/ubuntu/atlas/data/users_current.sqlite:/srv/shiny-server/data/users_current.sqlite   # ✅ rw file mount
+      - shiny-logs-3:/var/log/shiny-server
+      - /home/ubuntu/atlas/data/users_current.sqlite:/srv/shiny-server/data/users_current.sqlite
+    networks:
+      - shiny-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3838/atlas/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  nginx-logs:
+  shiny-logs-1:
+  shiny-logs-2:
+  shiny-logs-3:
+
+networks:
+  shiny-network:
+    driver: bridge
 
