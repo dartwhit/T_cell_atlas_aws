@@ -20,8 +20,10 @@ options(shiny.trace = TRUE)
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
-  db_path <- "/srv/shiny-server/atlas/data/users_current.sqlite"  # absolute! not relative
+  db_path <- "/srv/shiny-server/data/users_current.sqlite"  # Fixed path to match docker mount
   cat("Shinymanager DB (app):", db_path, "\n")
+  cat("DB exists:", file.exists(db_path), "\n")
+  cat("DB writable:", file.access(db_path, mode = 2) == 0, "\n")
   
 
   res_auth <- secure_server(

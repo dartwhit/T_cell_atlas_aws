@@ -32,7 +32,7 @@ services:
     volumes:
       - /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro
       - shiny-logs-1:/var/log/shiny-server
-      - /home/ubuntu/atlas/data/users_current.sqlite:/srv/shiny-server/data/users_current.sqlite
+      - users-db:/srv/shiny-server/data  # Use shared volume for SQLite DB
     networks:
       - shiny-network
     healthcheck:
@@ -57,7 +57,7 @@ services:
     volumes:
       - /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro
       - shiny-logs-2:/var/log/shiny-server
-      - /home/ubuntu/atlas/data/users_current.sqlite:/srv/shiny-server/data/users_current.sqlite
+      - users-db:/srv/shiny-server/data  # Use shared volume for SQLite DB
     networks:
       - shiny-network
     healthcheck:
@@ -82,7 +82,7 @@ services:
     volumes:
       - /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro
       - shiny-logs-3:/var/log/shiny-server
-      - /home/ubuntu/atlas/data/users_current.sqlite:/srv/shiny-server/data/users_current.sqlite
+      - users-db:/srv/shiny-server/data  # Use shared volume for SQLite DB
     networks:
       - shiny-network
     healthcheck:
@@ -102,6 +102,7 @@ volumes:
   shiny-logs-1:
   shiny-logs-2:
   shiny-logs-3:
+  users-db:  # Shared volume for user database
 
 networks:
   shiny-network:
