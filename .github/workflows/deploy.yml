@@ -42,15 +42,31 @@ jobs:
             echo "🧹 Stopping existing containers..."
             docker-compose down || true
 
-            echo "🔍 Freeing port 80 if used..."
-            CONTAINER_ID=$(docker ps --filter "publish=80" --format "{{.ID}}")
+            echo "🔍 Freeing port 80..."
+            # Kill any process using port 80
+            sudo lsof -ti:80 | xargs -r sudo kill -9 || true
+            
+            # Also check for docker containers on port 80
+            CONTAINER_ID=$(docker ps -a --filter "publish=80" --format "{{.ID}}" | head -1)
             if [ -n "${CONTAINER_ID:-}" ]; then
+              echo "  Found container using port 80: $CONTAINER_ID, removing..."
               docker stop "$CONTAINER_ID" || true
               docker rm "$CONTAINER_ID" || true
             fi
+            
+            # Give it a moment
+            sleep 2
 
             echo "🛠 Building images with cache..."
             docker-compose build --pull
+
+            echo "🔐 Verifying port 80 is free..."
+            if sudo lsof -ti:80 >/dev/null 2>&1; then
+              echo "❌ Port 80 is still in use!"
+              sudo lsof -i:80
+              exit 1
+            fi
+            echo "✓ Port 80 is free"
 
             echo "🚀 Starting multi-container stack..."
             docker-compose up -d --remove-orphans
