@@ -7,7 +7,9 @@ RUN apt-get update && apt-get install -y \
     libxml2-dev \
     libglpk-dev \
     python3 python3-pip python3-venv \
-    vim nano
+    vim nano \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create and activate Python env if needed
 RUN python3 -m venv /opt/venv
