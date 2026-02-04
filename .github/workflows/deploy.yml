@@ -55,23 +55,52 @@ jobs:
             echo "🚀 Starting multi-container stack..."
             docker-compose up -d --remove-orphans
 
-            echo "⏳ Waiting for containers to be healthy..."
-            timeout 120 bash -c 'until docker-compose ps | grep -q "healthy"; do sleep 2; done' || {
-              echo "⚠️  Health check timeout, checking status..."
-              docker-compose ps
-            }
+            echo "⏳ Waiting for containers to be healthy (max 120s)..."
+            MAX_ATTEMPTS=60
+            ATTEMPT=0
+            while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+              HEALTHY_COUNT=$(docker-compose ps | grep -c "healthy" || true)
+              TOTAL_COUNT=$(docker-compose ps | grep -c "shiny-app" || true)
+              
+              if [ "$HEALTHY_COUNT" -eq 3 ] && [ "$TOTAL_COUNT" -eq 3 ]; then
+                echo "✓ All containers healthy!"
+                break
+              fi
+              
+              echo "  [$(($ATTEMPT + 1))/$MAX_ATTEMPTS] Healthy: $HEALTHY_COUNT/3 containers"
+              sleep 2
+              ATTEMPT=$((ATTEMPT + 1))
+            done
 
-            echo "🩺 Final health check..."
-            sleep 5
-            if ! curl -sSf http://localhost/atlas/ >/dev/null; then
-              echo "❌ Health check failed. Container logs:" >&2
-              docker-compose logs --tail=200
+            if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+              echo "⚠️  Health check timeout after 120s"
+            fi
+
+            echo "🩺 Final health check via HTTP..."
+            RETRY_COUNT=0
+            while [ $RETRY_COUNT -lt 5 ]; do
+              if curl -sSf http://localhost/atlas/ >/dev/null 2>&1; then
+                echo "✓ HTTP health check passed!"
+                break
+              fi
+              echo "  Attempt $((RETRY_COUNT + 1))/5 failed, retrying..."
+              sleep 3
+              RETRY_COUNT=$((RETRY_COUNT + 1))
+            done
+
+            if [ $RETRY_COUNT -eq 5 ]; then
+              echo "❌ HTTP health check failed after 5 attempts"
+              echo "Container status:"
               docker-compose ps
+              echo "Nginx logs:"
+              docker-compose logs --tail=30 nginx
+              echo "App 1 logs:"
+              docker-compose logs --tail=30 shiny-app-1
               exit 1
             fi
 
             echo "✅ Deployed successfully!"
-            echo "📊 Container Status:"
+            echo "📊 Final Container Status:"
             docker-compose ps
             
             echo "🧹 Cleaning up old images..."
