@@ -2,11 +2,6 @@ name: Deploy to EC2
 
 on:
   workflow_dispatch:
-          inputs:
-            my_input:
-              description: 'A custom input'
-              required: false
-              type: string
   push:
     branches: [ main ]
     paths:
@@ -16,7 +11,6 @@ on:
       - '.github/workflows/deploy.yml'
       - 'app_code/**'
       - 'shiny-server.conf'
-      - 'imgs/**'
 
 jobs:
   deploy:
@@ -55,21 +49,30 @@ jobs:
               docker rm "$CONTAINER_ID" || true
             fi
 
-            echo "🛠 Building images..."
-            docker-compose build
+            echo "🛠 Building images with cache..."
+            docker-compose build --pull
 
             echo "🚀 Starting multi-container stack..."
-            docker-compose up -d
+            docker-compose up -d --remove-orphans
 
-            echo "🩺 Health check..."
-            sleep 10
+            echo "⏳ Waiting for containers to be healthy..."
+            timeout 120 bash -c 'until docker-compose ps | grep -q "healthy"; do sleep 2; done' || {
+              echo "⚠️  Health check timeout, checking status..."
+              docker-compose ps
+            }
+
+            echo "🩺 Final health check..."
+            sleep 5
             if ! curl -sSf http://localhost/atlas/ >/dev/null; then
               echo "❌ Health check failed. Container logs:" >&2
-              docker-compose logs --tail=200 || true
+              docker-compose logs --tail=200
+              docker-compose ps
               exit 1
             fi
 
-            echo "✅ Deployed successfully with $(docker-compose ps -q | wc -l) containers"
-
-            # Optional: reclaim space from old dangling images
+            echo "✅ Deployed successfully!"
+            echo "📊 Container Status:"
+            docker-compose ps
+            
+            echo "🧹 Cleaning up old images..."
             docker image prune -f || true
