@@ -29,6 +29,8 @@ dataset_details <- if (file.exists(dataset_details_path)) {
 # Initialize lists
 dataset_files <- list()
 data_level_choices <- list()
+dataset_comparison_type <- list()
+dataset_comparison_label <- list()
 
 # Populate lists based on dataset_meta and dataset_details
 for (i in 1:nrow(dataset_meta)) {
@@ -38,11 +40,15 @@ for (i in 1:nrow(dataset_meta)) {
     # If details are available in the JSON file, use them to build the data structures.
     dataset_files[[dataset_id]] <- dataset_details[[dataset_id]]$files
     data_level_choices[[dataset_id]] <- unlist(dataset_details[[dataset_id]]$data_levels)
+    dataset_comparison_type[[dataset_id]] <- dataset_details[[dataset_id]]$comparison_type %||% "disease"
+    dataset_comparison_label[[dataset_id]] <- dataset_details[[dataset_id]]$comparison_label %||% "SSc vs Healthy"
   } else {
     # If no details are found for the dataset in the JSON file, fall back to a minimal default structure.
     # This ensures that all datasets listed in datasets.tsv are available in the app, even without a detailed configuration.
     dataset_files[[dataset_id]] <- list(full = list(seurat = dataset_meta$file_path[i]))
     data_level_choices[[dataset_id]] <- c("Full" = "full")
+    dataset_comparison_type[[dataset_id]] <- "disease"
+    dataset_comparison_label[[dataset_id]] <- "SSc vs Healthy"
   }
 }
 

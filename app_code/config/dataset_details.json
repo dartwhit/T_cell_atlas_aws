@@ -1,5 +1,7 @@
 {
   "tmkmh": {
+    "comparison_type": "disease",
+    "comparison_label": "SSc vs Healthy",
     "data_levels": {
       "Full": "full",
       "Fibroblasts": "fib",
@@ -34,6 +36,8 @@
     }
   },
   "tabib": {
+    "comparison_type": "disease",
+    "comparison_label": "SSc vs Healthy",
     "data_levels": {
       "Full": "full",
       "Fibroblasts": "fib",
@@ -72,6 +76,8 @@
     }
   },
   "gur": {
+    "comparison_type": "disease",
+    "comparison_label": "SSc vs Healthy",
     "data_levels": {
       "Full": "full",
       "Fibroblasts": "fib",
@@ -110,6 +116,8 @@
     }
   },
   "ma": {
+    "comparison_type": "disease",
+    "comparison_label": "SSc vs Healthy",
     "data_levels": {
       "Full": "full",
       "Myeloid cells": "mye",
@@ -143,6 +151,8 @@
     }
   },
   "khanna": {
+    "comparison_type": "timepoint",
+    "comparison_label": "After vs Before Treatment",
     "data_levels": {
       "Full": "full",
       "Myeloid cells": "mye",

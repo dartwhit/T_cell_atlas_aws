@@ -181,6 +181,56 @@ server <- function(input, output, session) {
   pathway_list <- reactiveVal()
   meta_df <- reactiveVal()
   
+  # Dynamic UI for comparison checkbox with appropriate label
+  output$by_condition_checkbox <- renderUI({
+    req(sidebar_inputs$study())
+    comparison_type <- dataset_comparison_type[[sidebar_inputs$study()]]
+    
+    label <- if (comparison_type == "timepoint") {
+      "Compare by timepoint"
+    } else {
+      "Compare by disease"
+    }
+    
+    checkboxInput("by_disease", label)
+  })
+  
+  # Dynamic UI to show what comparison is being displayed
+  output$comparison_info <- renderUI({
+    req(sidebar_inputs$study())
+    
+    # Check if comparison data is available
+    has_comparison <- FALSE
+    if (sidebar_inputs$data_level() == "full") {
+      has_comparison <- !is.null(dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DE_by_disease_auto"]]) ||
+                       !is.null(dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DE_by_disease_broad"]])
+    } else {
+      has_comparison <- !is.null(dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DE_by_disease"]])
+    }
+    
+    if (!has_comparison) {
+      return(NULL)
+    }
+    
+    comparison_label <- dataset_comparison_label[[sidebar_inputs$study()]]
+    
+    if (input$by_disease) {
+      div(
+        style = "padding: 10px; margin-top: 10px; background-color: #e8f4f8; border-left: 4px solid #2196F3; border-radius: 4px;",
+        tags$strong(style = "color: #1976D2;", "Showing:"),
+        tags$br(),
+        tags$span(style = "color: #424242;", comparison_label)
+      )
+    } else {
+      div(
+        style = "padding: 10px; margin-top: 10px; background-color: #fff3e0; border-left: 4px solid #FF9800; border-radius: 4px;",
+        tags$strong(style = "color: #F57C00;", "Showing:"),
+        tags$br(),
+        tags$span(style = "color: #424242;", "Cluster markers (all cells)")
+      )
+    }
+  })
+  
   DEG_path <- reactive({
     input$by_disease
     # req(sidebar_inputs$study(), sidebar_inputs$data_level(), input$by_disease, sidebar_inputs$anno())
