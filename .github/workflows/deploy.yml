@@ -93,6 +93,11 @@ jobs:
                 echo "  ⚠️  Warning: Source database not found at /home/ubuntu/atlas/data/users_current.sqlite"
               fi
             fi
+            
+            echo "📁 Ensuring database directory is writable..."
+            docker run --rm \
+              -v t_cell_atlas_aws_users-db:/data \
+              alpine chmod 777 /data
 
             echo "⏳ Waiting for containers to be healthy (max 120s)..."
             MAX_ATTEMPTS=60

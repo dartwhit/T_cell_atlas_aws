@@ -25,6 +25,12 @@ server <- function(input, output, session) {
   cat("DB exists:", file.exists(db_path), "\n")
   cat("DB writable:", file.access(db_path, mode = 2) == 0, "\n")
   
+  # Check database directory permissions
+  db_dir <- dirname(db_path)
+  cat("DB dir:", db_dir, "\n")
+  cat("DB dir exists:", dir.exists(db_dir), "\n")
+  cat("DB dir writable:", file.access(db_dir, mode = 2) == 0, "\n")
+  
   # Enable WAL mode for better concurrent access
   if (file.exists(db_path)) {
     tryCatch({
