@@ -24,14 +24,6 @@ server <- function(input, output, session) {
   cat("Shinymanager DB (app):", db_path, "\n")
   cat("DB exists:", file.exists(db_path), "\n")
   cat("DB writable:", file.access(db_path, mode = 2) == 0, "\n")
-  
-  # Enable WAL mode for better concurrent access
-  if (file.exists(db_path)) {
-    con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
-    DBI::dbExecute(con, "PRAGMA journal_mode=WAL;")
-    DBI::dbExecute(con, "PRAGMA busy_timeout=5000;")
-    DBI::dbDisconnect(con)
-  }
 
   res_auth <- secure_server(
        check_credentials = check_credentials(db = db_path)
