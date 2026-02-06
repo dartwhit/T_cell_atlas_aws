@@ -214,7 +214,8 @@ server <- function(input, output, session) {
     
     comparison_label <- dataset_comparison_label[[sidebar_inputs$study()]]
     
-    if (input$by_disease) {
+    # Use isTruthy to handle NULL values safely
+    if (isTruthy(input$by_disease)) {
       div(
         style = "padding: 10px; margin-top: 10px; background-color: #e8f4f8; border-left: 4px solid #2196F3; border-radius: 4px;",
         tags$strong(style = "color: #1976D2;", "Showing:"),
