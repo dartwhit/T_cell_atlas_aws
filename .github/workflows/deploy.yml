@@ -71,6 +71,26 @@ jobs:
             echo "🚀 Starting multi-container stack..."
             docker-compose up -d --remove-orphans
 
+            echo "📋 Initializing user database..."
+            # Check if database exists in volume, if not copy from host
+            DB_EXISTS=$(docker run --rm -v t_cell_atlas_aws_users-db:/data alpine test -f /data/users_current.sqlite && echo "yes" || echo "no")
+            if [ "$DB_EXISTS" = "no" ]; then
+              echo "  Copying users database from host to Docker volume..."
+              docker run --rm \
+                -v t_cell_atlas_aws_users-db:/data \
+                -v /home/ubuntu/atlas/data:/source \
+                alpine cp /source/users_current.sqlite /data/users_current.sqlite
+              
+              echo "  Setting database permissions..."
+              docker run --rm \
+                -v t_cell_atlas_aws_users-db:/data \
+                alpine chmod 666 /data/users_current.sqlite
+              
+              echo "  ✓ Database initialized"
+            else
+              echo "  ✓ Database already exists in volume"
+            fi
+
             echo "⏳ Waiting for containers to be healthy (max 120s)..."
             MAX_ATTEMPTS=60
             ATTEMPT=0
