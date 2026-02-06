@@ -199,13 +199,16 @@ server <- function(input, output, session) {
   output$comparison_info <- renderUI({
     req(sidebar_inputs$study())
     
+    # Store dataset files reference for efficiency
+    current_dataset_files <- dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]]
+    
     # Check if comparison data is available
     has_comparison <- FALSE
     if (sidebar_inputs$data_level() == "full") {
-      has_comparison <- !is.null(dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DE_by_disease_auto"]]) ||
-                       !is.null(dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DE_by_disease_broad"]])
+      has_comparison <- !is.null(current_dataset_files[["DE_by_disease_auto"]]) ||
+                       !is.null(current_dataset_files[["DE_by_disease_broad"]])
     } else {
-      has_comparison <- !is.null(dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DE_by_disease"]])
+      has_comparison <- !is.null(current_dataset_files[["DE_by_disease"]])
     }
     
     if (!has_comparison) {
@@ -214,17 +217,21 @@ server <- function(input, output, session) {
     
     comparison_label <- dataset_comparison_label[[sidebar_inputs$study()]]
     
+    # CSS styles for info boxes
+    comparison_active_style <- "padding: 10px; margin-top: 10px; background-color: #e8f4f8; border-left: 4px solid #2196F3; border-radius: 4px;"
+    comparison_inactive_style <- "padding: 10px; margin-top: 10px; background-color: #fff3e0; border-left: 4px solid #FF9800; border-radius: 4px;"
+    
     # Use isTruthy to handle NULL values safely
     if (isTruthy(input$by_disease)) {
       div(
-        style = "padding: 10px; margin-top: 10px; background-color: #e8f4f8; border-left: 4px solid #2196F3; border-radius: 4px;",
+        style = comparison_active_style,
         tags$strong(style = "color: #1976D2;", "Showing:"),
         tags$br(),
         tags$span(style = "color: #424242;", comparison_label)
       )
     } else {
       div(
-        style = "padding: 10px; margin-top: 10px; background-color: #fff3e0; border-left: 4px solid #FF9800; border-radius: 4px;",
+        style = comparison_inactive_style,
         tags$strong(style = "color: #F57C00;", "Showing:"),
         tags$br(),
         tags$span(style = "color: #424242;", "Cluster markers (all cells)")
