@@ -68,7 +68,8 @@ card_tabib_DEGs <- card(
       title = "Differential Expression setup",
       position = "left",
       selectInput("cell_cluster", "Choose a cell cluster",choices = NULL),
-      checkboxInput("by_disease","Compare by disease"),
+      uiOutput("by_condition_checkbox"),
+      uiOutput("comparison_info"),
       actionButton("update_gene_queried","Show gene in UMAP space")
     ),
     uiOutput("DEGs_msg"),

@@ -1,5 +1,7 @@
 {
   "tmkmh": {
+    "comparison_type": "disease",
+    "comparison_label": "SSc vs Healthy",
     "data_levels": {
       "Full": "full",
       "Fibroblasts": "fib",
@@ -34,6 +36,8 @@
     }
   },
   "tabib": {
+    "comparison_type": "disease",
+    "comparison_label": "SSc vs Healthy",
     "data_levels": {
       "Full": "full",
       "Fibroblasts": "fib",
@@ -72,6 +76,8 @@
     }
   },
   "gur": {
+    "comparison_type": "disease",
+    "comparison_label": "SSc vs Healthy",
     "data_levels": {
       "Full": "full",
       "Fibroblasts": "fib",
@@ -110,6 +116,8 @@
     }
   },
   "ma": {
+    "comparison_type": "disease",
+    "comparison_label": "SSc vs Healthy",
     "data_levels": {
       "Full": "full",
       "Myeloid cells": "mye",
@@ -143,6 +151,8 @@
     }
   },
   "khanna": {
+    "comparison_type": "timepoint",
+    "comparison_label": "After vs Before Treatment",
     "data_levels": {
       "Full": "full",
       "Myeloid cells": "mye",
@@ -154,19 +164,23 @@
         "gene_list": "Khanna_gene_list.rds",
         "DEGs_auto": "Khanna_auto_DEGs_sig.txt",
         "DEGs_broad": "Khanna_broad_DEGs_sig.txt",
-        "VAM_df": "Khanna_filtered_reduced_2025-01-28_VAM_top.txt"
+        "VAM_df": "Khanna_filtered_reduced_2025-01-28_VAM_top.txt",
+        "DE_by_disease_auto": "Khanna_auto_DE_by_timepoint.txt",
+        "DE_by_disease_broad": "Khanna_broad_DE_by_timepoint.txt"
       },
       "fib": {
         "seurat": "Khanna_fib_filtered_VAM.rds",
         "gene_list": "Khanna_fib_gene_list.rds",
         "DEGs": "Khanna_fib_DEGs_sig.txt",
-        "VAM_df": "Khanna_fib_filtered_VAM_top.txt"
+        "VAM_df": "Khanna_fib_filtered_VAM_top.txt",
+        "DE_by_disease": "Khanna_fib_DE_by_timepoint.txt"
       },
       "mye": {
         "seurat": "Khanna_mye_filtered_VAM.rds",
         "gene_list": "Khanna_mye_gene_list.rds",
         "DEGs": "Khanna_mye_DEGs_sig.txt",
-        "VAM_df": "Khanna_mye_filtered_VAM_top.txt"
+        "VAM_df": "Khanna_mye_filtered_VAM_top.txt",
+        "DE_by_disease": "Khanna_mye_DE_by_timepoint.txt"
       },
       "spatial_seurat": null
     }

@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DE Comparison UI Preview</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .preview-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        .preview-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .preview-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #1976D2;
+        }
+        .sidebar-mock {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 4px;
+            background: #fafafa;
+        }
+        .sidebar-title {
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        select, input[type="checkbox"] {
+            margin-right: 8px;
+        }
+        select {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+        .info-box {
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .info-box-blue {
+            background-color: #e8f4f8;
+            border-left: 4px solid #2196F3;
+        }
+        .info-box-orange {
+            background-color: #fff3e0;
+            border-left: 4px solid #FF9800;
+        }
+        .info-box strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .info-box-blue strong {
+            color: #1976D2;
+        }
+        .info-box-orange strong {
+            color: #F57C00;
+        }
+        .info-box span {
+            color: #424242;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #1976D2;
+        }
+        .note {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #ffc107;
+            margin-bottom: 20px;
+        }
+        .comparison-label {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #e3f2fd;
+            border-radius: 3px;
+            font-size: 12px;
+            color: #1976D2;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Differential Expression Comparison UI Preview</h1>
+    
+    <div class="note">
+        <strong>📝 Note:</strong> This is a visual preview of the UI changes. The actual Shiny application will have the same styling and behavior.
+    </div>
+
+    <div class="preview-container">
+        <!-- Khanna Dataset - Unchecked -->
+        <div class="preview-box">
+            <div class="preview-title">
+                Khanna Dataset - Default View
+                <span class="comparison-label">timepoint</span>
+            </div>
+            <div class="sidebar-mock">
+                <div class="sidebar-title">Differential Expression setup</div>
+                
+                <div class="form-group">
+                    <label>Choose a cell cluster</label>
+                    <select>
+                        <option>Fibroblasts</option>
+                        <option>Myeloid cells</option>
+                        <option>T cells</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox"> Compare by timepoint
+                    </label>
+                </div>
+                
+                <div class="info-box info-box-orange">
+                    <strong>🟠 Showing:</strong>
+                    <span>Cluster markers (all cells)</span>
+                </div>
+                
+                <button>Show gene in UMAP space</button>
+            </div>
+        </div>
+
+        <!-- Khanna Dataset - Checked -->
+        <div class="preview-box">
+            <div class="preview-title">
+                Khanna Dataset - Comparison Active
+                <span class="comparison-label">timepoint</span>
+            </div>
+            <div class="sidebar-mock">
+                <div class="sidebar-title">Differential Expression setup</div>
+                
+                <div class="form-group">
+                    <label>Choose a cell cluster</label>
+                    <select>
+                        <option>Fibroblasts</option>
+                        <option>Myeloid cells</option>
+                        <option>T cells</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" checked> Compare by timepoint
+                    </label>
+                </div>
+                
+                <div class="info-box info-box-blue">
+                    <strong>🔵 Showing:</strong>
+                    <span>After vs Before Treatment</span>
+                </div>
+                
+                <button>Show gene in UMAP space</button>
+            </div>
+        </div>
+
+        <!-- Disease Dataset - Unchecked -->
+        <div class="preview-box">
+            <div class="preview-title">
+                Tabib Dataset - Default View
+                <span class="comparison-label">disease</span>
+            </div>
+            <div class="sidebar-mock">
+                <div class="sidebar-title">Differential Expression setup</div>
+                
+                <div class="form-group">
+                    <label>Choose a cell cluster</label>
+                    <select>
+                        <option>Fibroblasts</option>
+                        <option>Immune cells</option>
+                        <option>T cells</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox"> Compare by disease
+                    </label>
+                </div>
+                
+                <div class="info-box info-box-orange">
+                    <strong>🟠 Showing:</strong>
+                    <span>Cluster markers (all cells)</span>
+                </div>
+                
+                <button>Show gene in UMAP space</button>
+            </div>
+        </div>
+
+        <!-- Disease Dataset - Checked -->
+        <div class="preview-box">
+            <div class="preview-title">
+                Tabib Dataset - Comparison Active
+                <span class="comparison-label">disease</span>
+            </div>
+            <div class="sidebar-mock">
+                <div class="sidebar-title">Differential Expression setup</div>
+                
+                <div class="form-group">
+                    <label>Choose a cell cluster</label>
+                    <select>
+                        <option>Fibroblasts</option>
+                        <option>Immune cells</option>
+                        <option>T cells</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" checked> Compare by disease
+                    </label>
+                </div>
+                
+                <div class="info-box info-box-blue">
+                    <strong>🔵 Showing:</strong>
+                    <span>SSc vs Healthy</span>
+                </div>
+                
+                <button>Show gene in UMAP space</button>
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-top: 40px; padding: 20px; background: white; border-radius: 8px;">
+        <h2>Key Features</h2>
+        <ul>
+            <li><strong>Dynamic Checkbox Label:</strong> Changes from "Compare by disease" to "Compare by timepoint" based on dataset</li>
+            <li><strong>Color-Coded Info Boxes:</strong>
+                <ul>
+                    <li>🔵 Blue: Comparison mode active - shows specific comparison being made</li>
+                    <li>🟠 Orange: Standard view - shows cluster markers</li>
+                </ul>
+            </li>
+            <li><strong>Clear Communication:</strong> Users immediately see what comparison they're viewing</li>
+            <li><strong>Responsive:</strong> Updates automatically when dataset or checkbox state changes</li>
+        </ul>
+    </div>
+</body>
+</html>
