@@ -37,7 +37,26 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
         spat_obj
       } else {
         req(rds_path())
-        readRDS(rds_path())
+        path <- rds_path()
+        # Validate file exists
+        if (!file.exists(path)) {
+          showNotification(
+            paste("Spatial data file not found:", path),
+            type = "error",
+            duration = 10
+          )
+          return(NULL)
+        }
+        tryCatch({
+          readRDS(path)
+        }, error = function(e) {
+          showNotification(
+            paste("Error loading spatial data:", e$message),
+            type = "error",
+            duration = 10
+          )
+          return(NULL)
+        })
       }
     })
 
@@ -84,7 +103,12 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
 
     output$umap <- renderPlot({
       req(redn(), obj())
-      DimPlot(obj(), reduction = redn(), group.by = input$group_by)
+      tryCatch({
+        DimPlot(obj(), reduction = redn(), group.by = input$group_by)
+      }, error = function(e) {
+        plot(1, type = "n", axes = FALSE, xlab = "", ylab = "")
+        text(1, 1, paste("Error displaying UMAP:\n", e$message), cex = 1.2, col = "red")
+      })
     })
 
     output$featureplot <- renderPlot({
@@ -168,7 +192,13 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
             default_size <- default_pt_sizes()[s_local]
             final_size <- default_size * size_val_multiplier
             grp <- if (!is.null(input$group_by)) input$group_by else NULL
-            SpatialDimPlot(obj(), images = s_local, group.by = grp, pt.size.factor = final_size)
+            tryCatch({
+              SpatialDimPlot(obj(), images = s_local, group.by = grp, pt.size.factor = final_size)
+            }, error = function(e) {
+              # Return an error plot if SpatialDimPlot fails
+              plot(1, type = "n", axes = FALSE, xlab = "", ylab = "")
+              text(1, 1, paste("Error displaying spatial clusters:\n", e$message), cex = 0.8, col = "red")
+            })
           })
           
           # Reactive for FeaturePlot
