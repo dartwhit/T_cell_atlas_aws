@@ -19,7 +19,9 @@ jobs:
       - name: Calculate PR port
         id: port
         run: |
-          # Use PR number to assign unique port (3800 + PR number, max 3899)
+          # Use PR number to assign unique port (3800 + PR number % 100, max 3899)
+          # Note: PRs differing by 100 (e.g., #5 and #105) will share the same port
+          # The newer deployment will replace the older one on that port
           PR_NUM=${{ github.event.pull_request.number }}
           PR_PORT=$((3800 + ($PR_NUM % 100)))
           echo "pr_port=$PR_PORT" >> $GITHUB_OUTPUT
@@ -85,16 +87,21 @@ jobs:
             fi
 
             echo "🧹 Cleaning up old PR containers (keep last 5)..."
-            # List PR containers sorted by creation time, remove all but the 5 most recent
-            docker ps -a --filter "name=atlas-pr-" --format "{{.Names}}" | \
+            # List PR containers sorted by creation time (newest first), keep only 5 most recent
+            docker ps -a --filter "name=atlas-pr-" --format "{{.CreatedAt}}\t{{.Names}}" | \
+              sort -r | \
+              tail -n +6 | \
+              cut -f2 | \
               grep -v "$CONTAINER_NAME" | \
-              head -n -4 | \
               xargs -r docker rm -f || true
 
             echo "🧹 Cleaning up old PR images..."
-            docker images --filter "reference=atlas:pr-*" --format "{{.Repository}}:{{.Tag}}" | \
+            # List PR images sorted by creation time (newest first), keep only 5 most recent
+            docker images --filter "reference=atlas:pr-*" --format "{{.CreatedAt}}\t{{.Repository}}:{{.Tag}}" | \
+              sort -r | \
+              tail -n +6 | \
+              cut -f2 | \
               grep -v "atlas:pr-${PR_NUM}" | \
-              head -n -4 | \
               xargs -r docker rmi -f || true
 
             docker image prune -f || true

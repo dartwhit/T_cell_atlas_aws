@@ -53,6 +53,7 @@ All pull requests to the `main` branch are **automatically deployed to EC2** for
 **How It Works:**
 - When you open or update a PR, GitHub Actions automatically deploys your branch to EC2
 - Each PR gets a unique port (3800 + PR number % 100)
+  - **Note:** PRs with numbers differing by 100 (e.g., PR #5 and #105) will use the same port. The newer deployment will replace the older one.
 - A comment is posted on the PR with the deployment URL
 - Deployments typically complete in 2-3 minutes
 
