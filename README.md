@@ -1,7 +1,7 @@
 # SSc skin cell Atlas
 
 [![Deploy to EC2](https://github.com/dartwhit/T_cell_atlas_aws/actions/workflows/deploy.yml/badge.svg)](https://github.com/dartwhit/T_cell_atlas_aws/actions/workflows/deploy.yml)
-[![Test PR](https://github.com/dartwhit/T_cell_atlas_aws/actions/workflows/test-pr.yml/badge.svg)](https://github.com/dartwhit/T_cell_atlas_aws/actions/workflows/test-pr.yml)
+[![Deploy PR](https://github.com/dartwhit/T_cell_atlas_aws/actions/workflows/deploy-pr.yml/badge.svg)](https://github.com/dartwhit/T_cell_atlas_aws/actions/workflows/deploy-pr.yml)
 
 This project is a web-based application for exploring single-cell and spatial transcriptomics data related to Systemic Sclerosis (SSc). It's a Shiny app written in R, designed to be hosted on AWS.
 
@@ -46,22 +46,31 @@ This application is designed for deployment on AWS. The `Dockerfile` is used to 
 
 ## 🧪 Development & Testing
 
-### Pull Request Testing
+### Pull Request Deployment
 
-All pull requests to the `main` branch are automatically tested using GitHub Actions. The PR testing workflow (`.github/workflows/test-pr.yml`) performs the following checks:
+All pull requests to the `main` branch are **automatically deployed to EC2** for manual testing. This allows you to test the full UI and backend functionality in a real environment before merging.
 
-**Code Quality Checks:**
-- ✅ **R Syntax Validation:** Ensures all R files can be parsed without syntax errors
-- ℹ️ **R Linting:** Runs `lintr` to identify code style issues (informational only)
+**How It Works:**
+- When you open or update a PR, GitHub Actions automatically deploys your branch to EC2
+- Each PR gets a unique port (3800 + PR number % 100)
+- A comment is posted on the PR with the deployment URL
+- Deployments typically complete in 2-3 minutes
 
-**Functional Tests:**
-- ✅ **Shiny App Loading:** Verifies the app can initialize without immediate errors
-- ✅ **Docker Build:** Ensures the Docker image builds successfully
-- ✅ **Container Startup:** Tests that the containerized app can start
+**Manual Testing:**
+1. Open or update your PR
+2. Wait for the deployment workflow to complete
+3. Click the URL in the automated PR comment
+4. Test your changes in the live environment
+5. Check UI functionality and backend operations
 
-**Requirements:**
-- Tests run on `ubuntu-latest` with R 4.3
-- All dependencies from the Dockerfile are installed
-- Tests are designed to be practical and non-blocking for data-related issues
+**Access Information:**
+- The deployment URL will be posted as a comment on your PR
+- Example: `http://your-ec2-host:38XX/atlas/`
+- Each PR maintains its own isolated container and cache
 
-The workflow provides clear feedback on test results and will block merging if critical issues are found (syntax errors, build failures).
+**Container Management:**
+- PR containers are automatically cleaned up (keeping only the 5 most recent)
+- Containers use isolated cache and log directories
+- View logs on EC2: `docker logs atlas-pr-{PR_NUMBER}`
+
+**Note:** This replaces the previous automated testing workflow, which was slow (~1 hour). Manual testing on EC2 provides better validation of real-world functionality.

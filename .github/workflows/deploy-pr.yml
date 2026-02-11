@@ -1,0 +1,169 @@
+name: Deploy PR to EC2
+
+# Trigger on pull requests to main for manual testing
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  deploy-pr:
+    runs-on: ubuntu-latest
+
+    # Need write access to add PR comments
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Calculate PR port
+        id: port
+        run: |
+          # Use PR number to assign unique port (3800 + PR number, max 3899)
+          PR_NUM=${{ github.event.pull_request.number }}
+          PR_PORT=$((3800 + ($PR_NUM % 100)))
+          echo "pr_port=$PR_PORT" >> $GITHUB_OUTPUT
+          echo "PR #$PR_NUM will use port $PR_PORT"
+
+      - name: Deploy PR to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
+          command_timeout: 30m
+          script: |
+            set -euo pipefail
+
+            PR_NUM=${{ github.event.pull_request.number }}
+            PR_PORT=${{ steps.port.outputs.pr_port }}
+            PR_BRANCH="${{ github.head_ref }}"
+            CONTAINER_NAME="atlas-pr-${PR_NUM}"
+
+            cd /home/ubuntu/T_cell_atlas_aws
+
+            echo "📦 Fetching PR branch: $PR_BRANCH..."
+            git fetch origin "$PR_BRANCH"
+            git checkout -B "pr-${PR_NUM}" "origin/${PR_BRANCH}"
+
+            echo "🔐 Setting permissions for mounted volumes..."
+            mkdir -p "/home/ubuntu/atlas/pr_cache/pr-${PR_NUM}"
+            sudo chmod 777 "/home/ubuntu/atlas/pr_cache/pr-${PR_NUM}"
+            mkdir -p "/home/ubuntu/atlas/logs/pr-${PR_NUM}"
+            sudo chmod 777 "/home/ubuntu/atlas/logs/pr-${PR_NUM}"
+
+            echo "🧹 Removing existing PR container (if any)..."
+            docker rm -f "$CONTAINER_NAME" || true
+
+            echo "🔍 Freeing port ${PR_PORT} if used..."
+            CID=$(docker ps --filter "publish=${PR_PORT}" --format "{{.ID}}")
+            [ -n "${CID:-}" ] && docker stop "$CID" && docker rm "$CID" || true
+
+            echo "🛠 Building PR image..."
+            docker build --no-cache -t "atlas:pr-${PR_NUM}" .
+
+            echo "🚀 Running PR container on port ${PR_PORT}..."
+            docker run -d \
+              --name "$CONTAINER_NAME" \
+              --restart unless-stopped \
+              -p "${PR_PORT}:3838" \
+              -e SHINY_LOG_STDERR=1 \
+              -v /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro \
+              -v "/home/ubuntu/atlas/pr_cache/pr-${PR_NUM}:/srv/shiny-server/atlas/app_cache" \
+              -v "/home/ubuntu/atlas/logs/pr-${PR_NUM}:/var/log/shiny-server" \
+              "atlas:pr-${PR_NUM}"
+
+            echo "🩺 Health check..."
+            sleep 5
+            if curl -sSf "http://localhost:${PR_PORT}/atlas/" >/dev/null; then
+              echo "✅ PR container is running successfully!"
+            else
+              echo "❌ Health check failed. Recent logs:" >&2
+              docker logs --tail=200 "$CONTAINER_NAME" || true
+              exit 1
+            fi
+
+            echo "🧹 Cleaning up old PR containers (keep last 5)..."
+            # List PR containers sorted by creation time, remove all but the 5 most recent
+            docker ps -a --filter "name=atlas-pr-" --format "{{.Names}}" | \
+              grep -v "$CONTAINER_NAME" | \
+              head -n -4 | \
+              xargs -r docker rm -f || true
+
+            echo "🧹 Cleaning up old PR images..."
+            docker images --filter "reference=atlas:pr-*" --format "{{.Repository}}:{{.Tag}}" | \
+              grep -v "atlas:pr-${PR_NUM}" | \
+              head -n -4 | \
+              xargs -r docker rmi -f || true
+
+            docker image prune -f || true
+
+            echo ""
+            echo "=========================================="
+            echo "✅ PR #${PR_NUM} deployed successfully!"
+            echo "=========================================="
+            echo "🔗 Access at: http://${{ secrets.EC2_HOST }}:${PR_PORT}/atlas/"
+            echo "📝 Container: $CONTAINER_NAME"
+            echo "📊 View logs: docker logs $CONTAINER_NAME"
+            echo "=========================================="
+
+      - name: Comment on PR with deployment info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const prPort = ${{ steps.port.outputs.pr_port }};
+            const ec2Host = '${{ secrets.EC2_HOST }}';
+            
+            const body = `## 🚀 PR Deployed for Manual Testing
+            
+            Your PR has been deployed to EC2 for manual testing!
+            
+            **Access URL:** \`http://${ec2Host}:${prPort}/atlas/\`
+            
+            **Container:** \`atlas-pr-${prNumber}\`
+            
+            **Testing Instructions:**
+            1. Navigate to the URL above
+            2. Test the UI functionality
+            3. Test backend operations
+            4. Verify your changes work as expected
+            
+            **View Logs (on EC2):**
+            \`\`\`bash
+            docker logs atlas-pr-${prNumber}
+            \`\`\`
+            
+            **Note:** This is a temporary deployment for testing. The container will be automatically cleaned up after newer PRs are deployed (keeping last 5 PRs).
+            
+            ---
+            _This deployment will be updated automatically when you push new commits to this PR._`;
+            
+            // Find existing comment to update or create new one
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
+            
+            const botComment = comments.data.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('PR Deployed for Manual Testing')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: body,
+              });
+            }
