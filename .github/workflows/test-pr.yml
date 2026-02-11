@@ -9,6 +9,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    # Explicit permissions for security - only read access needed
+    permissions:
+      contents: read
+
     steps:
       # Checkout the PR code
       - name: Checkout code
