@@ -134,9 +134,11 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
       plot_obj <- obj()
       # Determine which assay to use
       feature_assay <- get_best_assay(plot_obj)
-      if (!is.null(feature_assay)) {
-        DefaultAssay(plot_obj) <- feature_assay
+      if (is.null(feature_assay)) {
+        render_error_plot("No valid assay available for feature plotting", cex = 1.2)
+        return()
       }
+      DefaultAssay(plot_obj) <- feature_assay
       tryCatch({
         FeaturePlot(
           plot_obj, features = input$feature,
@@ -224,9 +226,11 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
             plot_obj <- obj()
             # Determine which assay to use
             feature_assay <- get_best_assay(plot_obj)
-            if (!is.null(feature_assay)) {
-              DefaultAssay(plot_obj) <- feature_assay
+            if (is.null(feature_assay)) {
+              render_error_plot("No valid assay available for feature plotting", cex = 0.8)
+              return()
             }
+            DefaultAssay(plot_obj) <- feature_assay
             tryCatch({
               SpatialFeaturePlot(plot_obj, images = s_local, features = input$feature, pt.size.factor = final_size)
             }, error = function(e) {
