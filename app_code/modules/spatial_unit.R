@@ -66,6 +66,7 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
     get_best_assay <- function(seurat_obj) {
       available_assays <- Seurat::Assays(seurat_obj)
       if (length(available_assays) == 0) {
+        warning("Seurat object has no assays available")
         return(NULL)
       }
       if ("SCT" %in% available_assays) {
@@ -75,6 +76,12 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
       } else {
         return(available_assays[1])
       }
+    }
+    
+    # Helper function to render error plots consistently
+    render_error_plot <- function(message, cex = 1.0) {
+      plot(1, type = "n", axes = FALSE, xlab = "", ylab = "")
+      text(1, 1, message, cex = cex, col = "red")
     }
 
     default_pt_sizes <- reactive({
@@ -118,8 +125,7 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
       tryCatch({
         DimPlot(obj(), reduction = redn(), group.by = input$group_by)
       }, error = function(e) {
-        plot(1, type = "n", axes = FALSE, xlab = "", ylab = "")
-        text(1, 1, paste("Error displaying UMAP:\n", e$message), cex = 1.2, col = "red")
+        render_error_plot(paste("Error displaying UMAP:\n", e$message), cex = 1.2)
       })
     })
 
@@ -137,8 +143,7 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
           reduction = redn()
         )
       }, error = function(e) {
-        plot(1, type = "n", axes = FALSE, xlab = "", ylab = "")
-        text(1, 1, paste("Error displaying feature plot:\n", e$message), cex = 1.2, col = "red")
+        render_error_plot(paste("Error displaying feature plot:\n", e$message), cex = 1.2)
       })
     })
     
@@ -205,9 +210,7 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
             tryCatch({
               SpatialDimPlot(obj(), images = s_local, group.by = grp, pt.size.factor = final_size)
             }, error = function(e) {
-              # Return an error plot if SpatialDimPlot fails
-              plot(1, type = "n", axes = FALSE, xlab = "", ylab = "")
-              text(1, 1, paste("Error displaying spatial clusters:\n", e$message), cex = 0.8, col = "red")
+              render_error_plot(paste("Error displaying spatial clusters:\n", e$message), cex = 0.8)
             })
           })
           
@@ -227,9 +230,7 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
             tryCatch({
               SpatialFeaturePlot(plot_obj, images = s_local, features = input$feature, pt.size.factor = final_size)
             }, error = function(e) {
-              # Return an error plot if SpatialFeaturePlot fails
-              plot(1, type = "n", axes = FALSE, xlab = "", ylab = "")
-              text(1, 1, paste("Error displaying spatial feature plot:\n", e$message), cex = 0.8, col = "red")
+              render_error_plot(paste("Error displaying spatial feature plot:\n", e$message), cex = 0.8)
             })
           })
 
