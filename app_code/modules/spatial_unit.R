@@ -55,12 +55,27 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
             type = "error",
             duration = 10
           )
-          return(NULL)
+          NULL
         })
       }
     })
 
     safe_id <- function(x) gsub("[^A-Za-z0-9_]", "_", x)
+    
+    # Helper function to determine which assay to use
+    get_best_assay <- function(seurat_obj) {
+      available_assays <- Seurat::Assays(seurat_obj)
+      if (length(available_assays) == 0) {
+        return(NULL)
+      }
+      if ("SCT" %in% available_assays) {
+        return("SCT")
+      } else if ("RNA" %in% available_assays) {
+        return("RNA")
+      } else {
+        return(available_assays[1])
+      }
+    }
 
     default_pt_sizes <- reactive({
       req(obj())
@@ -83,15 +98,12 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
     observe({
       req(obj())
       # Determine which assay to use for feature choices
-      available_assays <- Seurat::Assays(obj())
-      feature_assay <- if ("SCT" %in% available_assays) {
-        "SCT"
-      } else if ("RNA" %in% available_assays) {
-        "RNA"
+      feature_assay <- get_best_assay(obj())
+      if (!is.null(feature_assay)) {
+        updateSelectizeInput(session, "feature", choices = rownames(obj()[[feature_assay]]), server = TRUE)
       } else {
-        available_assays[1]
+        updateSelectizeInput(session, "feature", choices = character(0), server = TRUE)
       }
-      updateSelectizeInput(session, "feature", choices = rownames(obj()[[feature_assay]]), server = TRUE)
       updateCheckboxGroupInput(session, "samples", choices = names(obj()@images))
     })
 
@@ -115,11 +127,9 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
       req(obj(), input$feature)
       plot_obj <- obj()
       # Determine which assay to use
-      available_assays <- Seurat::Assays(plot_obj)
-      if ("SCT" %in% available_assays) {
-        DefaultAssay(plot_obj) <- "SCT"
-      } else if ("RNA" %in% available_assays) {
-        DefaultAssay(plot_obj) <- "RNA"
+      feature_assay <- get_best_assay(plot_obj)
+      if (!is.null(feature_assay)) {
+        DefaultAssay(plot_obj) <- feature_assay
       }
       tryCatch({
         FeaturePlot(
@@ -210,11 +220,9 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
             final_size <- default_size * size_val_multiplier
             plot_obj <- obj()
             # Determine which assay to use
-            available_assays <- Seurat::Assays(plot_obj)
-            if ("SCT" %in% available_assays) {
-              DefaultAssay(plot_obj) <- "SCT"
-            } else if ("RNA" %in% available_assays) {
-              DefaultAssay(plot_obj) <- "RNA"
+            feature_assay <- get_best_assay(plot_obj)
+            if (!is.null(feature_assay)) {
+              DefaultAssay(plot_obj) <- feature_assay
             }
             tryCatch({
               SpatialFeaturePlot(plot_obj, images = s_local, features = input$feature, pt.size.factor = final_size)
