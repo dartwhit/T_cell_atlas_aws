@@ -63,7 +63,16 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
 
     observe({
       req(obj())
-      updateSelectizeInput(session, "feature", choices = rownames(obj()[["SCT"]]), server = TRUE)
+      # Determine which assay to use for feature choices
+      available_assays <- Seurat::Assays(obj())
+      feature_assay <- if ("SCT" %in% available_assays) {
+        "SCT"
+      } else if ("RNA" %in% available_assays) {
+        "RNA"
+      } else {
+        available_assays[1]
+      }
+      updateSelectizeInput(session, "feature", choices = rownames(obj()[[feature_assay]]), server = TRUE)
       updateCheckboxGroupInput(session, "samples", choices = names(obj()@images))
     })
 
@@ -81,11 +90,22 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
     output$featureplot <- renderPlot({
       req(obj(), input$feature)
       plot_obj <- obj()
-      DefaultAssay(plot_obj) <- "SCT"
-      FeaturePlot(
-        plot_obj, features = input$feature,
-        reduction = redn()
-      )
+      # Determine which assay to use
+      available_assays <- Seurat::Assays(plot_obj)
+      if ("SCT" %in% available_assays) {
+        DefaultAssay(plot_obj) <- "SCT"
+      } else if ("RNA" %in% available_assays) {
+        DefaultAssay(plot_obj) <- "RNA"
+      }
+      tryCatch({
+        FeaturePlot(
+          plot_obj, features = input$feature,
+          reduction = redn()
+        )
+      }, error = function(e) {
+        plot(1, type = "n", axes = FALSE, xlab = "", ylab = "")
+        text(1, 1, paste("Error displaying feature plot:\n", e$message), cex = 1.2, col = "red")
+      })
     })
     
     # ---- Sample-centric dynamic grid ----
@@ -159,8 +179,20 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
             default_size <- default_pt_sizes()[s_local]
             final_size <- default_size * size_val_multiplier
             plot_obj <- obj()
-            DefaultAssay(plot_obj) <- "SCT"
-            SpatialFeaturePlot(plot_obj, images = s_local, features = input$feature, pt.size.factor = final_size)
+            # Determine which assay to use
+            available_assays <- Seurat::Assays(plot_obj)
+            if ("SCT" %in% available_assays) {
+              DefaultAssay(plot_obj) <- "SCT"
+            } else if ("RNA" %in% available_assays) {
+              DefaultAssay(plot_obj) <- "RNA"
+            }
+            tryCatch({
+              SpatialFeaturePlot(plot_obj, images = s_local, features = input$feature, pt.size.factor = final_size)
+            }, error = function(e) {
+              # Return an error plot if SpatialFeaturePlot fails
+              plot(1, type = "n", axes = FALSE, xlab = "", ylab = "")
+              text(1, 1, paste("Error displaying spatial feature plot:\n", e$message), cex = 0.8, col = "red")
+            })
           })
 
           # Render plots
