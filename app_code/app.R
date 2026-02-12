@@ -11,8 +11,40 @@ if (disable_auth) {
 } else {
   cat("✅ Authentication ENABLED - wrapping UI with secure_app()\n", file = stderr())
   library(shinymanager)
+  
+  # Extract custom head tags before wrapping
+  custom_scripts <- tags$head(
+    tags$script(HTML('
+      // Wait for jQuery to be available before using it
+      function waitForJQuery(callback) {
+        if (typeof jQuery !== "undefined") {
+          callback(jQuery);
+        } else {
+          setTimeout(function() { waitForJQuery(callback); }, 50);
+        }
+      }
+      
+      // Use jQuery once it\'s available
+      waitForJQuery(function($) {
+        $(document).on("shiny:connected", function() {
+          function updateDimensions() {
+            Shiny.onInputChange("dimension", [window.innerWidth, window.innerHeight]);
+          }
+          updateDimensions();
+          $(window).resize(updateDimensions);
+
+          // Any element with id starting with "explore_" switches to Explore tab
+          $("[id^=\'explore_\']").on("click", function() {
+            $("a[data-value=\'Explore\']").tab("show");
+          });
+        });
+      });
+    '))
+  )
+  
   tryCatch({
-    ui <- secure_app(ui, enable_admin = TRUE)
+    # Use tags_top parameter to ensure custom scripts are included
+    ui <- secure_app(ui, enable_admin = TRUE, tags_top = custom_scripts)
     cat("✓ UI wrapped with authentication successfully\n", file = stderr())
   }, error = function(e) {
     cat("❌ ERROR wrapping UI with secure_app():", conditionMessage(e), "\n", file = stderr())

@@ -85,35 +85,7 @@ ui <- page_navbar(
   useShinyjs(), # Enable shinyjs
 
   tags$head(
-    tags$script(HTML('
-      // Wait for jQuery to be available before using it
-      function waitForJQuery(callback) {
-        if (typeof jQuery !== "undefined") {
-          callback(jQuery);
-        } else {
-          setTimeout(function() { waitForJQuery(callback); }, 50);
-        }
-      }
-      
-      // Use jQuery once it\'s available
-      waitForJQuery(function($) {
-        $(document).on("shiny:connected", function() {
-          function updateDimensions() {
-            Shiny.onInputChange("dimension", [window.innerWidth, window.innerHeight]);
-          }
-          updateDimensions();
-          $(window).resize(updateDimensions);
-
-          // Any element with id starting with "explore_" switches to Explore tab
-          $("[id^=\'explore_\']").on("click", function() {
-            $("a[data-value=\'Explore\']").tab("show");
-          });
-        });
-      });
-    ')),
     tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
-
-
   ),
   theme = bs_theme(bootswatch = "flatly"),
   # Page title
