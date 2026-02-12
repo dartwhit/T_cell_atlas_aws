@@ -24,7 +24,8 @@ jobs:
           # Limited range makes EC2 security group configuration easier
           # Note: PRs differing by 10 (e.g., #5 and #15) will share the same port
           # The newer deployment will replace the older one on that port
-          PR_NUM=${{ github.event.pull_request.number }}
+          # For manual triggers, use run_number as fallback
+          PR_NUM=${{ github.event.pull_request.number || github.run_number }}
           PR_PORT=$((3800 + ($PR_NUM % 10)))
           echo "pr_port=$PR_PORT" >> $GITHUB_OUTPUT
           echo "PR #$PR_NUM will use port $PR_PORT"
@@ -40,9 +41,9 @@ jobs:
           script: |
             set -euo pipefail
 
-            PR_NUM=${{ github.event.pull_request.number }}
+            PR_NUM=${{ github.event.pull_request.number || github.run_number }}
             PR_PORT=${{ steps.port.outputs.pr_port }}
-            PR_BRANCH="${{ github.head_ref }}"
+            PR_BRANCH="${{ github.head_ref || github.ref_name }}"
             CONTAINER_NAME="atlas-pr-${PR_NUM}"
 
             cd /home/ubuntu/T_cell_atlas_aws
@@ -119,6 +120,7 @@ jobs:
             echo "=========================================="
 
       - name: Comment on PR with deployment info
+        if: github.event.pull_request.number
         uses: actions/github-script@v7
         with:
           script: |
