@@ -50,6 +50,12 @@ This application is designed for deployment on AWS. The `Dockerfile` is used to 
 
 All pull requests to the `main` branch are **automatically deployed to EC2** for manual testing. This allows you to test the full UI and backend functionality in a real environment before merging.
 
+**Authentication:**
+- **PR deployments have authentication DISABLED** for easier testing
+- No login required - direct access to the app
+- Welcome message shows "Testing Mode"
+- Production and dev deployments keep authentication enabled
+
 **How It Works:**
 - When you open or update a PR, GitHub Actions automatically deploys your branch to EC2
 - Each PR gets a unique port (3800-3809, based on PR number % 10)
