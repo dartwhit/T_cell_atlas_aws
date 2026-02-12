@@ -220,8 +220,9 @@ ui <- page_navbar(
 
 # Wrap UI with shinymanager authentication
 # Can be disabled by setting DISABLE_AUTH=true environment variable
-disable_auth_value <- Sys.getenv("DISABLE_AUTH", "false")
-cat("DISABLE_AUTH environment variable:", disable_auth_value, "\n", file = stderr())
+disable_auth <- tolower(trimws(Sys.getenv("DISABLE_AUTH", "false")))
+if (!(disable_auth %in% c("true", "1", "t", "yes", "y"))) {
+cat("DISABLE_AUTH environment variable:", disable_auth_value, "\n", file = stderr())}
 if (disable_auth_value != "true") {
   cat("Wrapping UI with secure_app()\n", file = stderr())
   ui <- secure_app(ui, enable_admin = TRUE)
