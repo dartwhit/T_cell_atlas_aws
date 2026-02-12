@@ -73,6 +73,7 @@ jobs:
               --restart unless-stopped \
               -p "${PR_PORT}:3838" \
               -e SHINY_LOG_STDERR=1 \
+              -e DISABLE_AUTH=true \
               -v /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro \
               -v "/home/ubuntu/atlas/pr_cache/pr-${PR_NUM}:/srv/shiny-server/atlas/app_cache" \
               -v "/home/ubuntu/atlas/logs/pr-${PR_NUM}:/var/log/shiny-server" \

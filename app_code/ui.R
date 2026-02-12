@@ -224,4 +224,7 @@ if (Sys.getenv("DISABLE_AUTH", "false") != "true") {
   ui <- secure_app(ui, enable_admin = TRUE)
 }
 
+# Ensure ui is always defined for app.R
+ui
+
 
