@@ -1,0 +1,187 @@
+name: Deploy PR to EC2
+
+# Trigger on pull requests to main for manual testing
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+jobs:
+  deploy-pr:
+    runs-on: ubuntu-latest
+
+    # Need write access to add PR comments
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Calculate PR port
+        id: port
+        run: |
+          # Use PR number to assign unique port (3800-3809, only 10 ports)
+          # Limited range makes EC2 security group configuration easier
+          # Note: PRs differing by 10 (e.g., #5 and #15) will share the same port
+          # The newer deployment will replace the older one on that port
+          PR_NUM=${{ github.event.pull_request.number }}
+          PR_PORT=$((3800 + ($PR_NUM % 10)))
+          echo "pr_port=$PR_PORT" >> $GITHUB_OUTPUT
+          echo "PR #$PR_NUM will use port $PR_PORT"
+
+      - name: Deploy PR to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
+          command_timeout: 30m
+          script: |
+            set -euo pipefail
+
+            PR_NUM=${{ github.event.pull_request.number }}
+            PR_PORT=${{ steps.port.outputs.pr_port }}
+            PR_BRANCH="${{ github.head_ref }}"
+            CONTAINER_NAME="atlas-pr-${PR_NUM}"
+
+            cd /home/ubuntu/T_cell_atlas_aws
+
+            echo "📦 Fetching PR branch: $PR_BRANCH..."
+            git fetch origin "$PR_BRANCH"
+            git checkout -B "pr-${PR_NUM}" "origin/${PR_BRANCH}"
+
+            echo "🔐 Setting permissions for mounted volumes..."
+            mkdir -p "/home/ubuntu/atlas/pr_cache/pr-${PR_NUM}"
+            sudo chmod 777 "/home/ubuntu/atlas/pr_cache/pr-${PR_NUM}"
+            mkdir -p "/home/ubuntu/atlas/logs/pr-${PR_NUM}"
+            sudo chmod 777 "/home/ubuntu/atlas/logs/pr-${PR_NUM}"
+
+            echo "🧹 Removing existing PR container (if any)..."
+            docker rm -f "$CONTAINER_NAME" || true
+
+            echo "🔍 Freeing port ${PR_PORT} if used..."
+            CID=$(docker ps --filter "publish=${PR_PORT}" --format "{{.ID}}")
+            [ -n "${CID:-}" ] && docker stop "$CID" && docker rm "$CID" || true
+
+            echo "🛠 Building PR image..."
+            docker build --no-cache -t "atlas:pr-${PR_NUM}" .
+
+            echo "🚀 Running PR container on port ${PR_PORT}..."
+            docker run -d \
+              --name "$CONTAINER_NAME" \
+              --restart unless-stopped \
+              -p "${PR_PORT}:3838" \
+              -e SHINY_LOG_STDERR=1 \
+              -v /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro \
+              -v "/home/ubuntu/atlas/pr_cache/pr-${PR_NUM}:/srv/shiny-server/atlas/app_cache" \
+              -v "/home/ubuntu/atlas/logs/pr-${PR_NUM}:/var/log/shiny-server" \
+              "atlas:pr-${PR_NUM}"
+
+            echo "🩺 Health check..."
+            sleep 5
+            if curl -sSf "http://localhost:${PR_PORT}/atlas/" >/dev/null; then
+              echo "✅ PR container is running successfully!"
+            else
+              echo "❌ Health check failed. Recent logs:" >&2
+              docker logs --tail=200 "$CONTAINER_NAME" || true
+              exit 1
+            fi
+
+            echo "🧹 Cleaning up old PR containers (keep last 5)..."
+            # List PR containers sorted by creation time (newest first), keep only 5 most recent
+            docker ps -a --filter "name=atlas-pr-" --format "{{.CreatedAt}}\t{{.Names}}" | \
+              sort -r | \
+              tail -n +6 | \
+              cut -f2 | \
+              grep -v "$CONTAINER_NAME" | \
+              xargs -r docker rm -f || true
+
+            echo "🧹 Cleaning up old PR images..."
+            # List PR images sorted by creation time (newest first), keep only 5 most recent
+            docker images --filter "reference=atlas:pr-*" --format "{{.CreatedAt}}\t{{.Repository}}:{{.Tag}}" | \
+              sort -r | \
+              tail -n +6 | \
+              cut -f2 | \
+              grep -v "atlas:pr-${PR_NUM}" | \
+              xargs -r docker rmi -f || true
+
+            docker image prune -f || true
+
+            echo ""
+            echo "=========================================="
+            echo "✅ PR #${PR_NUM} deployed successfully!"
+            echo "=========================================="
+            echo "🔗 Access at: http://${{ secrets.EC2_HOST }}:${PR_PORT}/atlas/"
+            echo "📝 Container: $CONTAINER_NAME"
+            echo "📊 View logs: docker logs $CONTAINER_NAME"
+            echo "=========================================="
+
+      - name: Comment on PR with deployment info
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const prPort = ${{ steps.port.outputs.pr_port }};
+            const ec2Host = '${{ secrets.EC2_HOST }}';
+            
+            console.log(`Preparing to post comment for PR #${prNumber}`);
+            console.log(`Port: ${prPort}, Host: ${ec2Host}`);
+            
+            const body = '## 🚀 PR Deployed for Manual Testing\n\n' +
+              'Your PR has been deployed to EC2 for manual testing!\n\n' +
+              '**Access URL:** `http://' + ec2Host + ':' + prPort + '/atlas/`\n\n' +
+              '**Container:** `atlas-pr-' + prNumber + '`\n\n' +
+              '**Testing Instructions:**\n' +
+              '1. Navigate to the URL above\n' +
+              '2. Test the UI functionality\n' +
+              '3. Test backend operations\n' +
+              '4. Verify your changes work as expected\n\n' +
+              '**View Logs (on EC2):**\n' +
+              '```bash\n' +
+              'docker logs atlas-pr-' + prNumber + '\n' +
+              '```\n\n' +
+              '**Note:** This is a temporary deployment for testing. The container will be automatically cleaned up after newer PRs are deployed (keeping last 5 PRs).\n\n' +
+              '---\n' +
+              '_This deployment will be updated automatically when you push new commits to this PR._';
+            
+            try {
+              // Find existing comment to update or create new one
+              console.log('Fetching existing comments...');
+              const comments = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+              });
+              
+              console.log(`Found ${comments.data.length} existing comments`);
+              
+              const botComment = comments.data.find(comment => 
+                comment.user.type === 'Bot' && 
+                comment.body.includes('PR Deployed for Manual Testing')
+              );
+              
+              if (botComment) {
+                console.log(`Updating existing comment #${botComment.id}`);
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id,
+                  body: body,
+                });
+                console.log('✅ Comment updated successfully');
+              } else {
+                console.log('Creating new comment...');
+                const result = await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  body: body,
+                });
+                console.log(`✅ Comment created successfully with ID: ${result.data.id}`);
+              }
+            } catch (error) {
+              console.error('❌ Error posting comment:', error);
+              core.setFailed(`Failed to post PR comment: ${error.message}`);
+              throw error;
+            }
