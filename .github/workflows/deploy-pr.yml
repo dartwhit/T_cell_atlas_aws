@@ -19,11 +19,12 @@ jobs:
       - name: Calculate PR port
         id: port
         run: |
-          # Use PR number to assign unique port (3800 + PR number % 100, max 3899)
-          # Note: PRs differing by 100 (e.g., #5 and #105) will share the same port
+          # Use PR number to assign unique port (3800-3809, only 10 ports)
+          # Limited range makes EC2 security group configuration easier
+          # Note: PRs differing by 10 (e.g., #5 and #15) will share the same port
           # The newer deployment will replace the older one on that port
           PR_NUM=${{ github.event.pull_request.number }}
-          PR_PORT=$((3800 + ($PR_NUM % 100)))
+          PR_PORT=$((3800 + ($PR_NUM % 10)))
           echo "pr_port=$PR_PORT" >> $GITHUB_OUTPUT
           echo "PR #$PR_NUM will use port $PR_PORT"
 
