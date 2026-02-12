@@ -124,54 +124,63 @@ jobs:
             const prPort = ${{ steps.port.outputs.pr_port }};
             const ec2Host = '${{ secrets.EC2_HOST }}';
             
-            const body = `## 🚀 PR Deployed for Manual Testing
+            console.log(`Preparing to post comment for PR #${prNumber}`);
+            console.log(`Port: ${prPort}, Host: ${ec2Host}`);
             
-            Your PR has been deployed to EC2 for manual testing!
+            const body = '## 🚀 PR Deployed for Manual Testing\n\n' +
+              'Your PR has been deployed to EC2 for manual testing!\n\n' +
+              '**Access URL:** `http://' + ec2Host + ':' + prPort + '/atlas/`\n\n' +
+              '**Container:** `atlas-pr-' + prNumber + '`\n\n' +
+              '**Testing Instructions:**\n' +
+              '1. Navigate to the URL above\n' +
+              '2. Test the UI functionality\n' +
+              '3. Test backend operations\n' +
+              '4. Verify your changes work as expected\n\n' +
+              '**View Logs (on EC2):**\n' +
+              '```bash\n' +
+              'docker logs atlas-pr-' + prNumber + '\n' +
+              '```\n\n' +
+              '**Note:** This is a temporary deployment for testing. The container will be automatically cleaned up after newer PRs are deployed (keeping last 5 PRs).\n\n' +
+              '---\n' +
+              '_This deployment will be updated automatically when you push new commits to this PR._';
             
-            **Access URL:** \`http://${ec2Host}:${prPort}/atlas/\`
-            
-            **Container:** \`atlas-pr-${prNumber}\`
-            
-            **Testing Instructions:**
-            1. Navigate to the URL above
-            2. Test the UI functionality
-            3. Test backend operations
-            4. Verify your changes work as expected
-            
-            **View Logs (on EC2):**
-            \`\`\`bash
-            docker logs atlas-pr-${prNumber}
-            \`\`\`
-            
-            **Note:** This is a temporary deployment for testing. The container will be automatically cleaned up after newer PRs are deployed (keeping last 5 PRs).
-            
-            ---
-            _This deployment will be updated automatically when you push new commits to this PR._`;
-            
-            // Find existing comment to update or create new one
-            const comments = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: prNumber,
-            });
-            
-            const botComment = comments.data.find(comment => 
-              comment.user.type === 'Bot' && 
-              comment.body.includes('PR Deployed for Manual Testing')
-            );
-            
-            if (botComment) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: botComment.id,
-                body: body,
-              });
-            } else {
-              await github.rest.issues.createComment({
+            try {
+              // Find existing comment to update or create new one
+              console.log('Fetching existing comments...');
+              const comments = await github.rest.issues.listComments({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: prNumber,
-                body: body,
               });
+              
+              console.log(`Found ${comments.data.length} existing comments`);
+              
+              const botComment = comments.data.find(comment => 
+                comment.user.type === 'Bot' && 
+                comment.body.includes('PR Deployed for Manual Testing')
+              );
+              
+              if (botComment) {
+                console.log(`Updating existing comment #${botComment.id}`);
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id,
+                  body: body,
+                });
+                console.log('✅ Comment updated successfully');
+              } else {
+                console.log('Creating new comment...');
+                const result = await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  body: body,
+                });
+                console.log(`✅ Comment created successfully with ID: ${result.data.id}`);
+              }
+            } catch (error) {
+              console.error('❌ Error posting comment:', error);
+              core.setFailed(`Failed to post PR comment: ${error.message}`);
+              throw error;
             }
