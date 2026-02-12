@@ -86,16 +86,28 @@ ui <- page_navbar(
 
   tags$head(
     tags$script(HTML('
-      $(document).on("shiny:connected", function() {
-        function updateDimensions() {
-          Shiny.onInputChange("dimension", [window.innerWidth, window.innerHeight]);
+      // Wait for jQuery to be available before using it
+      function waitForJQuery(callback) {
+        if (typeof jQuery !== "undefined") {
+          callback(jQuery);
+        } else {
+          setTimeout(function() { waitForJQuery(callback); }, 50);
         }
-        updateDimensions();
-        $(window).resize(updateDimensions);
+      }
+      
+      // Use jQuery once it\'s available
+      waitForJQuery(function($) {
+        $(document).on("shiny:connected", function() {
+          function updateDimensions() {
+            Shiny.onInputChange("dimension", [window.innerWidth, window.innerHeight]);
+          }
+          updateDimensions();
+          $(window).resize(updateDimensions);
 
-        // Any element with id starting with "explore_" switches to Explore tab
-        $("[id^=\'explore_\']").on("click", function() {
-          $("a[data-value=\'Explore\']").tab("show");
+          // Any element with id starting with "explore_" switches to Explore tab
+          $("[id^=\'explore_\']").on("click", function() {
+            $("a[data-value=\'Explore\']").tab("show");
+          });
         });
       });
     ')),
