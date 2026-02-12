@@ -1,0 +1,16 @@
+# Example docker-compose override file for PR/testing deployments
+# To use: copy this file to docker-compose.override.yml
+# This file will automatically be picked up by docker-compose
+
+services:
+  shiny-app-1:
+    environment:
+      - DISABLE_AUTH=true  # Disable shinymanager authentication for testing
+  
+  shiny-app-2:
+    environment:
+      - DISABLE_AUTH=true  # Disable shinymanager authentication for testing
+  
+  shiny-app-3:
+    environment:
+      - DISABLE_AUTH=true  # Disable shinymanager authentication for testing

@@ -219,6 +219,9 @@ ui <- page_navbar(
 )
 
 # Wrap UI with shinymanager authentication
-ui <- secure_app(ui, enable_admin = TRUE)
+# Can be disabled by setting DISABLE_AUTH=true environment variable
+if (Sys.getenv("DISABLE_AUTH", "false") != "true") {
+  ui <- secure_app(ui, enable_admin = TRUE)
+}
 
 
