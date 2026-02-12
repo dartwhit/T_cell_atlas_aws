@@ -218,27 +218,7 @@ ui <- page_navbar(
 
 )
 
-# Wrap UI with shinymanager authentication (unless disabled via environment variable)
-disable_auth <- Sys.getenv("DISABLE_AUTH", "false") == "true"
-if (disable_auth) {
-  cat("⚠️  Authentication DISABLED via DISABLE_AUTH environment variable\n", file = stderr())
-  # ui is already defined above, no wrapping needed
-} else {
-  cat("✅ Authentication ENABLED - wrapping UI with secure_app()\n", file = stderr())
-  tryCatch({
-    ui <- secure_app(ui, enable_admin = TRUE)
-    cat("✓ UI wrapped with authentication successfully\n", file = stderr())
-  }, error = function(e) {
-    cat("❌ ERROR wrapping UI with secure_app():", conditionMessage(e), "\n", file = stderr())
-    cat("⚠️  Continuing with unwrapped UI\n", file = stderr())
-    # ui remains as the original page_navbar() object
-  })
-}
-
-# Verify ui is defined
-if (!exists("ui")) {
-  stop("ERROR: ui object was not created!")
-}
-cat("✓ UI object defined successfully\n", file = stderr())
+# UI is now defined and will be wrapped with authentication in app.R if needed
+cat("✓ UI object created in ui.R\n", file = stderr())
 
 
