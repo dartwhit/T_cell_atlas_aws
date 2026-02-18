@@ -243,7 +243,7 @@ server <- function(input, output, session) {
     req(sidebar_inputs$study(), sidebar_inputs$data_level())
     study <- sidebar_inputs$study()
     level <- sidebar_inputs$data_level()
-    compare <- sidebar_inputs$compare_by_disease()
+    compare <- input$by_disease  # Use input$by_disease from main server, not sidebar
     
     if (isTRUE(compare)) {
       if (level == "full") {
