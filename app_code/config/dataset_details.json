@@ -131,21 +131,25 @@
         "DEGs_broad": "Ma_broad_DEGs_sig.txt",
         "VAM_df": "Ma_filtered_reduced_2025-01-28_VAM_top.txt",
         "DE_by_disease_broad": "Ma_full_broad_DE_by_disease.txt",
-        "DE_by_disease_auto": "Ma_full_auto_DE_by_disease.txt"
+        "DE_by_disease_auto": "Ma_full_auto_DE_by_disease.txt",
+        "VAM_by_disease_broad": "Ma_broad_VAMcdf_DE_by_disease.txt",
+        "VAM_by_disease_auto": "Ma_auto_VAMcdf_DE_by_disease.txt"
       },
       "mye": {
         "seurat": "Ma_mye_filtered_VAM.rds",
         "gene_list": "Ma_mye_gene_list.rds",
         "DEGs": "Ma_mye_DEGs_sig.txt",
         "VAM_df": "Ma_mye_filtered_VAM_top.txt",
-        "DE_by_disease": "Ma_mye_DE_by_disease.txt"
+        "DE_by_disease": "Ma_mye_DE_by_disease.txt",
+        "VAM_by_disease": "Ma_mye_VAMcdf_DE_by_disease.txt"
       },
       "fib": {
         "seurat": "Ma_fib_filtered_VAM.rds",
         "gene_list": "Ma_fib_gene_list.rds",
         "DEGs": "Ma_fib_DEGs_sig.txt",
         "VAM_df": "Ma_fib_filtered_VAM_top.txt",
-        "DE_by_disease": "Ma_fib_DE_by_disease.txt"
+        "DE_by_disease": "Ma_fib_DE_by_disease.txt",
+        "VAM_by_disease": "Ma_fib_VAMcdf_DE_by_disease.txt"
       },
       "spatial_seurat": "2025-07-07_MaSSc_Visium_PRECAST_SingleCellPredicted_RegionsNamed_CARD.rds"
     }
@@ -166,21 +170,25 @@
         "DEGs_broad": "Khanna_broad_DEGs_sig.txt",
         "VAM_df": "Khanna_filtered_reduced_2025-01-28_VAM_top.txt",
         "DE_by_disease_auto": "Khanna_auto_DE_by_timepoint.txt",
-        "DE_by_disease_broad": "Khanna_broad_DE_by_timepoint.txt"
+        "DE_by_disease_broad": "Khanna_broad_DE_by_timepoint.txt",
+        "VAM_by_disease_auto": "Khanna_auto_VAMcdf_DE_by_timepoint.txt",
+        "VAM_by_disease_broad": "Khanna_broad_VAMcdf_DE_by_timepoint.txt"
       },
       "fib": {
         "seurat": "Khanna_fib_filtered_VAM.rds",
         "gene_list": "Khanna_fib_gene_list.rds",
         "DEGs": "Khanna_fib_DEGs_sig.txt",
         "VAM_df": "Khanna_fib_filtered_VAM_top.txt",
-        "DE_by_disease": "Khanna_fib_DE_by_timepoint.txt"
+        "DE_by_disease": "Khanna_fib_DE_by_timepoint.txt",
+        "VAM_by_disease": "Khanna_fib_VAMcdf_DE_by_timepoint.txt"
       },
       "mye": {
         "seurat": "Khanna_mye_filtered_VAM.rds",
         "gene_list": "Khanna_mye_gene_list.rds",
         "DEGs": "Khanna_mye_DEGs_sig.txt",
         "VAM_df": "Khanna_mye_filtered_VAM_top.txt",
-        "DE_by_disease": "Khanna_mye_DE_by_timepoint.txt"
+        "DE_by_disease": "Khanna_mye_DE_by_timepoint.txt",
+        "VAM_by_disease": "Khanna_mye_VAMcdf_DE_by_timepoint.txt"
       },
       "spatial_seurat": null
     }
