@@ -240,28 +240,26 @@ server <- function(input, output, session) {
   })
   
   DEG_path <- reactive({
-    input$by_disease
-    # req(sidebar_inputs$study(), sidebar_inputs$data_level(), input$by_disease, sidebar_inputs$anno())
+    req(sidebar_inputs$study(), sidebar_inputs$data_level())
+    study <- sidebar_inputs$study()
+    level <- sidebar_inputs$data_level()
+    compare <- sidebar_inputs$compare_by_disease()
     
-    if (input$by_disease == FALSE) {
-      if (sidebar_inputs$data_level() == "full") {
-        if (sidebar_inputs$anno() == TRUE) {
-          paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DEGs_auto"]])
-        } else {
-          paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DEGs_broad"]])
-        }
+    if (isTRUE(compare)) {
+      if (level == "full") {
+        paste0(inDir, DE_dir, dataset_files[[study]][[level]][["DE_by_disease_auto"]])
       } else {
-        paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DEGs"]])
+        paste0(inDir, DE_dir, dataset_files[[study]][[level]][["DE_by_disease"]])
       }
     } else {
-      if (sidebar_inputs$data_level() == "full") {
+      if (level == "full") {
         if (sidebar_inputs$anno() == TRUE) {
-          paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DE_by_disease_auto"]])
+          paste0(inDir, DE_dir, dataset_files[[study]][[level]][["DEGs_auto"]])
         } else {
-          paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DE_by_disease_broad"]])
+          paste0(inDir, DE_dir, dataset_files[[study]][[level]][["DEGs_broad"]])
         }
       } else {
-        paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DE_by_disease"]])
+        paste0(inDir, DE_dir, dataset_files[[study]][[level]][["DEGs"]])
       }
     }
   })
