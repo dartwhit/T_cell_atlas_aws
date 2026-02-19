@@ -39,7 +39,10 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
         req(rds_path())
         loaded_obj <- readRDS(rds_path())
         updated_obj <- UpdateSeuratObject(loaded_obj)
-        updated_obj
+        # Force cell alignment between object and spatial images
+        # This ensures cell names match between the main object and image coordinates
+        aligned_obj <- subset(updated_obj, cells = colnames(updated_obj))
+        aligned_obj
       }
     })
 
