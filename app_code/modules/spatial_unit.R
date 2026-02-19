@@ -110,14 +110,14 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
             col_widths = c(6, 6),
             plotOutput(ns(dimplot_id), height = 380),
             conditionalPanel(
-              condition = paste0("input['", ns("feature"), "'] && input['", ns("feature"), "'].length > 0"),
+              condition = paste0("input['", ns("feature"), "']"),
               plotOutput(ns(featureplot_id), height = 380)
             )
           ),
           card_footer(
             downloadButton(ns(dld_dim_id), "Download Clusters"),
             conditionalPanel(
-              condition = paste0("input['", ns("feature"), "'] && input['", ns("feature"), "'].length > 0"),
+              condition = paste0("input['", ns("feature"), "']"),
               downloadButton(ns(dld_feat_id), "Download Features")
             )
           )

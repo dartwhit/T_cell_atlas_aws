@@ -14,7 +14,7 @@ test_ui <- bslib::page_fluid(
                   choices = c("Seurat cluster" = "cluster",
                   "Key regions" =  "Key_Regions"),
                 selected = "cluster"),
-      selectizeInput(NS("sp1", "feature"), "Feature (Gene/pathway)", multiple = TRUE,
+      selectizeInput(NS("sp1", "feature"), "Feature (Gene/pathway)",
       choices = NULL, options = list(placeholder = "Type to search…")),
       checkboxGroupInput(NS("sp1", "samples"),
                     "Select samples to view"
