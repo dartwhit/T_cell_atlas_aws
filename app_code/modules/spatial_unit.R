@@ -75,7 +75,21 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
 
     observe({
       req(obj())
-      updateSelectizeInput(session, "feature", choices = rownames(obj()[["SCT"]]), server = TRUE)
+      # Determine which assay to use for feature selection
+      assay_to_use <- if ("SCT" %in% names(obj()@assays)) {
+        "SCT"
+      } else if ("Spatial" %in% names(obj()@assays)) {
+        "Spatial"
+      } else {
+        "RNA"
+      }
+      
+      tryCatch({
+        updateSelectizeInput(session, "feature", choices = rownames(obj()[[assay_to_use]]), server = TRUE)
+      }, error = function(e) {
+        cat("Error updating feature choices:", e$message, "\n", file = stderr())
+      })
+      
       updateCheckboxGroupInput(session, "samples", choices = names(obj()@images))
     })
 
@@ -99,7 +113,14 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
       req(obj(), input$feature)
       tryCatch({
         plot_obj <- obj()
-        DefaultAssay(plot_obj) <- "SCT"
+        # Determine which assay to use
+        if ("SCT" %in% names(plot_obj@assays)) {
+          DefaultAssay(plot_obj) <- "SCT"
+        } else if ("Spatial" %in% names(plot_obj@assays)) {
+          DefaultAssay(plot_obj) <- "Spatial"
+        } else {
+          DefaultAssay(plot_obj) <- "RNA"
+        }
         FeaturePlot(
           plot_obj, features = input$feature,
           reduction = redn()
@@ -188,10 +209,17 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
               default_size <- default_pt_sizes()[s_local]
               final_size <- default_size * size_val_multiplier
               plot_obj <- obj()
-              DefaultAssay(plot_obj) <- "SCT"
+              # Determine which assay to use
+              if ("SCT" %in% names(plot_obj@assays)) {
+                DefaultAssay(plot_obj) <- "SCT"
+              } else if ("Spatial" %in% names(plot_obj@assays)) {
+                DefaultAssay(plot_obj) <- "Spatial"
+              } else {
+                DefaultAssay(plot_obj) <- "RNA"
+              }
               SpatialFeaturePlot(plot_obj, images = s_local, features = input$feature, pt.size.factor = final_size)
             }, error = function(e) {
-              cat("Error in SpatialFeaturePlot for sample", s_local, ":", e$message, "\n")
+              cat("Error in SpatialFeaturePlot for sample", s_local, ":", e$message, "\n", file = stderr())
               plot.new()
               text(0.5, 0.5, paste("Error:\n", e$message), cex = 1, col = "red")
             })

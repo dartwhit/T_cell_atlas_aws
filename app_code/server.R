@@ -519,8 +519,8 @@ server <- function(input, output, session) {
     if (reset_trigger()) {
       return(NULL)
     }
-    if (input$update_gene_queried){
-      new_gene_queried()
+    if (isTRUE(input$update_gene_queried)){
+      return(new_gene_queried())
     }
     
     if (!sidebar_inputs$use_textinput() && length(sidebar_inputs$gene_select()) > 0) {
@@ -539,9 +539,9 @@ server <- function(input, output, session) {
     if (reset_trigger()) {
       return(NULL)
     }
-    if (input$update_gene_queried){
+    if (isTRUE(input$update_gene_queried)){
       if(sidebar_inputs$feature_type() == "Pathways"){
-        new_gene_queried()
+        return(new_gene_queried())
         
       }
     }
