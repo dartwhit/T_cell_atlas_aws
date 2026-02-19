@@ -248,28 +248,26 @@ server <- function(input, output, session) {
   })
   
   DEG_path <- reactive({
-    input$by_disease
-    # req(sidebar_inputs$study(), sidebar_inputs$data_level(), input$by_disease, sidebar_inputs$anno())
+    req(sidebar_inputs$study(), sidebar_inputs$data_level())
+    study <- sidebar_inputs$study()
+    level <- sidebar_inputs$data_level()
+    compare <- input$by_disease  # Use input$by_disease from main server, not sidebar
     
-    if (input$by_disease == FALSE) {
-      if (sidebar_inputs$data_level() == "full") {
-        if (sidebar_inputs$anno() == TRUE) {
-          paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DEGs_auto"]])
-        } else {
-          paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DEGs_broad"]])
-        }
+    if (isTRUE(compare)) {
+      if (level == "full") {
+        paste0(inDir, DE_dir, dataset_files[[study]][[level]][["DE_by_disease_auto"]])
       } else {
-        paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DEGs"]])
+        paste0(inDir, DE_dir, dataset_files[[study]][[level]][["DE_by_disease"]])
       }
     } else {
-      if (sidebar_inputs$data_level() == "full") {
+      if (level == "full") {
         if (sidebar_inputs$anno() == TRUE) {
-          paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DE_by_disease_auto"]])
+          paste0(inDir, DE_dir, dataset_files[[study]][[level]][["DEGs_auto"]])
         } else {
-          paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DE_by_disease_broad"]])
+          paste0(inDir, DE_dir, dataset_files[[study]][[level]][["DEGs_broad"]])
         }
       } else {
-        paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["DE_by_disease"]])
+        paste0(inDir, DE_dir, dataset_files[[study]][[level]][["DEGs"]])
       }
     }
   })
@@ -321,18 +319,32 @@ server <- function(input, output, session) {
     
     req(DEG_path())
     print(paste("Loading DEGs from", DEG_path()))
-     deg_df <- if (endsWith(DEG_path(), ".csv")) {
-      read.csv(DEG_path())
+    deg_df <- tryCatch({
+      if (endsWith(DEG_path(), ".csv")) {
+        read.csv(DEG_path())
+      } else {
+        read.delim(DEG_path(), sep = "\t")
+      }
+    }, error = function(e) {
+      cat("Error reading DEG file:", conditionMessage(e), "\n")
+      showNotification(paste("Error loading DEG file:", conditionMessage(e)), type = "error", duration = NULL)
+      return(NULL)
+    })
+    
+    if (is.null(deg_df) || !("cluster" %in% colnames(deg_df))) {
+      cat("Warning: DEG file missing or lacks 'cluster' column\n")
+      showNotification("DEG file is missing or lacks required 'cluster' column", type = "warning", duration = NULL)
+      DEGs_df(NULL)
+      cell_clusters(NULL)
+      updateSelectInput(session, "cell_cluster", choices = NULL)
     } else {
-      read.delim(DEG_path(), sep = "\t")
+      DEGs_df(deg_df)
+      cell_clusters(levels(as.factor(deg_df$cluster)))
+      updateSelectInput(session, "cell_cluster", choices = cell_clusters())
     }
     
-    DEGs_df(deg_df)
-    cell_clusters(levels(as.factor(deg_df$cluster)))
-    updateSelectInput(session, "cell_cluster", choices = cell_clusters())
-    
-    meta_file <- dataset_files[[sidebar_inputs$study()]][["meta"]]
-    metadata_path <- paste0(inDir,meta_file)
+    meta_file <- dataset_metadata_file[[sidebar_inputs$study()]]
+    metadata_path <- if (!is.null(meta_file)) paste0(inDir, meta_file) else NULL
 
     ################## Load data ##################
     # Seurat object and gene lists
@@ -403,15 +415,28 @@ server <- function(input, output, session) {
     req(DEG_path())
     
     print(paste("Reloading DEGs from", DEG_path()))
-     deg_df <- if (endsWith(DEG_path(), ".csv")) {
-      read.csv(DEG_path())
-    } else {
-      read.delim(DEG_path(), sep = "\t")
-    }
+    deg_df <- tryCatch({
+      if (endsWith(DEG_path(), ".csv")) {
+        read.csv(DEG_path())
+      } else {
+        read.delim(DEG_path(), sep = "\t")
+      }
+    }, error = function(e) {
+      cat("Error reading DEG file:", conditionMessage(e), "\n")
+      showNotification(paste("Error loading DEG file:", conditionMessage(e)), type = "error", duration = NULL)
+      return(NULL)
+    })
     
-    DEGs_df(deg_df)
-    cell_clusters(levels(as.factor(deg_df$cluster)))
-    updateSelectInput(session, "cell_cluster", choices = cell_clusters())
+    if (is.null(deg_df) || !("cluster" %in% colnames(deg_df))) {
+      cat("Warning: DEG file missing or lacks 'cluster' column\n")
+      DEGs_df(NULL)
+      cell_clusters(NULL)
+      updateSelectInput(session, "cell_cluster", choices = NULL)
+    } else {
+      DEGs_df(deg_df)
+      cell_clusters(levels(as.factor(deg_df$cluster)))
+      updateSelectInput(session, "cell_cluster", choices = cell_clusters())
+    }
   })
   
   # trigger reset when changing study or dataset level

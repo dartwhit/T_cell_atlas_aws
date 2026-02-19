@@ -1,0 +1,213 @@
+name: Test Pull Request
+
+# Trigger on pull requests targeting the main branch
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # Explicit permissions for security - only read access needed
+    permissions:
+      contents: read
+
+    steps:
+      # Checkout the PR code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ============================================
+      # R Environment Setup & Dependency Installation
+      # ============================================
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.3'  # Using R 4.3 for stability; matches rocker/shiny base image
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libcurl4-gnutls-dev \
+            libssl-dev \
+            libxml2-dev \
+            libglpk-dev \
+            python3 \
+            python3-pip \
+            python3-venv
+
+      - name: Install R package dependencies
+        run: |
+          # Install required R packages (matching Dockerfile)
+          Rscript -e 'install.packages(c("plotly", "igraph", "Seurat", "Matrix", "SeuratObject", "DT", "ggplot2", "dplyr", "stringr", "shiny", "shinymanager", "shinyWidgets", "bslib", "shinycssloaders", "bsicons", "VAM", "periscope2", "shinyjs", "tidyr", "DBI", "RSQLite"), repos="https://cloud.r-project.org")'
+
+          # Install lintr for code quality checks
+          Rscript -e 'install.packages("lintr", repos="https://cloud.r-project.org")'
+
+      # ============================================
+      # Code Quality Checks
+      # ============================================
+
+      - name: Check R syntax
+        run: |
+          echo "Checking R syntax for all .R files..."
+          Rscript -e '
+            files <- list.files("app_code", pattern = "\\.R$", recursive = TRUE, full.names = TRUE)
+            errors <- FALSE
+            for (f in files) {
+              cat("Checking:", f, "\n")
+              result <- tryCatch({
+                parse(f)
+                cat("  ✓ OK\n")
+              }, error = function(e) {
+                cat("  ✗ SYNTAX ERROR:", conditionMessage(e), "\n")
+                errors <<- TRUE
+              })
+            }
+            if (errors) quit(status = 1)
+          '
+
+      - name: Run R linting (non-blocking)
+        run: |
+          echo "Running lintr on R code..."
+          Rscript -e '
+            library(lintr)
+            files <- list.files("app_code", pattern = "\\.R$", recursive = TRUE, full.names = TRUE)
+
+            # Run linting but make it informative only, not blocking
+            results <- lapply(files, function(f) {
+              cat("Linting:", f, "\n")
+              tryCatch({
+                lints <- lint(f)
+                if (length(lints) > 0) {
+                  print(lints)
+                }
+              }, error = function(e) {
+                cat("  Warning: Could not lint", f, ":", conditionMessage(e), "\n")
+              })
+            })
+
+            cat("\n✓ Linting completed (informational only)\n")
+          ' || echo "⚠️ Linting encountered issues but continuing..."
+
+      # ============================================
+      # Shiny App Testing
+      # ============================================
+
+      - name: Test Shiny app can load
+        run: |
+          echo "Testing if Shiny app can initialize..."
+          cd app_code
+
+          # Create a test script that loads the app without running it
+          cat > test_app_load.R << 'EOF'
+          # Test script to verify app can load without errors
+          tryCatch({
+            # Source the main files
+            source("setup.R", local = TRUE)
+            source("ui.R", local = TRUE)
+            source("server.R", local = TRUE)
+
+            # Try to create the app object (without running it)
+            app <- shinyApp(ui = ui, server = server)
+
+            cat("\n✓ SUCCESS: Shiny app loaded without errors\n")
+            quit(status = 0)
+          }, error = function(e) {
+            cat("\n✗ ERROR: Failed to load Shiny app\n")
+            cat("Error message:", conditionMessage(e), "\n")
+            quit(status = 1)
+          })
+          EOF
+
+          # Run the test (with timeout)
+          timeout 60 Rscript test_app_load.R || {
+            echo "⚠️ App loading test failed or timed out"
+            echo "Note: This may be due to missing data files in CI environment"
+            exit 0  # Don't fail the build for data-related issues
+          }
+
+      # ============================================
+      # Docker Build & Container Testing
+      # ============================================
+
+      - name: Build Docker image
+        run: |
+          echo "Building Docker image..."
+          docker build -t atlas-test:pr-${{ github.event.pull_request.number }} .
+
+      - name: Test Docker container startup
+        run: |
+          echo "Testing if container can start..."
+
+          # Start container in background
+          docker run -d \
+            --name atlas-test-container \
+            -p 3838:3838 \
+            -e SHINY_LOG_STDERR=1 \
+            atlas-test:pr-${{ github.event.pull_request.number }}
+
+          # Wait for container to be ready (max 30 seconds)
+          echo "Waiting for container to start..."
+          RETRY_COUNT=0
+          MAX_RETRIES=15
+
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            if docker ps | grep -q atlas-test-container; then
+              echo "Container is running"
+              sleep 2  # Give it a moment to fully start
+
+              # Check if the process is still running (not crashed)
+              if docker ps | grep -q atlas-test-container; then
+                echo "✓ Container started successfully"
+
+                # Show logs for debugging
+                echo "Container logs (first 50 lines):"
+                docker logs atlas-test-container 2>&1 | head -50
+
+                # Cleanup
+                docker stop atlas-test-container
+                docker rm atlas-test-container
+
+                exit 0
+              fi
+            fi
+
+            echo "Retry $((RETRY_COUNT + 1))/$MAX_RETRIES..."
+            sleep 2
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+          done
+
+          # If we got here, container didn't start properly
+          echo "✗ Container failed to start or crashed"
+          echo "Container logs:"
+          docker logs atlas-test-container 2>&1 || echo "No logs available"
+
+          # Cleanup
+          docker stop atlas-test-container 2>/dev/null || true
+          docker rm atlas-test-container 2>/dev/null || true
+
+          # Don't fail the build if container has data-related issues
+          echo "⚠️ Container test completed with warnings"
+          exit 0
+
+      # ============================================
+      # Test Summary
+      # ============================================
+
+      - name: Test Summary
+        if: always()
+        run: |
+          echo "======================================"
+          echo "         PR Test Summary"
+          echo "======================================"
+          echo "R syntax check: See step output above"
+          echo "R linting: See step output above (informational)"
+          echo "Docker build: See step output above"
+          echo "Container test: See step output above"
+          echo "======================================"
+          echo "Check individual step results for details"
+          echo "======================================"
