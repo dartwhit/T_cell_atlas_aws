@@ -40,7 +40,10 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
         loaded_obj <- readRDS(rds_path())
         updated_obj <- UpdateSeuratObject(loaded_obj)
         # Force cell alignment between object and spatial images
-        # This ensures cell names match between the main object and image coordinates
+        # Subsetting by all cells triggers Seurat's internal cell validation and
+        # realigns cell names between the main object and image@coordinates slots.
+        # This is necessary because UpdateSeuratObject may not always fix coordinate
+        # alignment issues that cause "data aligns to the image" errors in SpatialPlot.
         aligned_obj <- subset(updated_obj, cells = colnames(updated_obj))
         aligned_obj
       }
