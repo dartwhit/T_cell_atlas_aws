@@ -38,7 +38,8 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
       } else {
         req(rds_path())
         loaded_obj <- readRDS(rds_path())
-        UpdateSeuratObject(loaded_obj)
+        updated_obj <- UpdateSeuratObject(loaded_obj)
+        updated_obj
       }
     })
 
