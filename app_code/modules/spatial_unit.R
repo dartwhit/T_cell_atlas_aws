@@ -57,6 +57,21 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
           cat("Updating Seurat object...\n", file = stderr())
           updated_obj <- UpdateSeuratObject(loaded_obj)
           cat("✓ Seurat object updated for compatibility\n", file = stderr())
+          
+          # Also update spatial images to ensure alignment
+          cat("Updating spatial images...\n", file = stderr())
+          for (img_name in names(updated_obj@images)) {
+            tryCatch({
+              # Re-initialize each image with updated coordinates
+              img <- updated_obj@images[[img_name]]
+              # Force update by accessing and reassigning
+              updated_obj@images[[img_name]] <- img
+              cat("  ✓ Updated image:", img_name, "\n", file = stderr())
+            }, error = function(e) {
+              cat("  Warning: Could not update image", img_name, ":", e$message, "\n", file = stderr())
+            })
+          }
+          
           updated_obj
         }, error = function(e) {
           cat("✗ Error loading/updating spatial object:", e$message, "\n", file = stderr())
