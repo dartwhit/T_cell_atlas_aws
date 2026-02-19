@@ -56,6 +56,17 @@ jobs:
             sudo chmod 777 "/home/ubuntu/atlas/pr_cache/pr-${PR_NUM}"
             mkdir -p "/home/ubuntu/atlas/logs/pr-${PR_NUM}"
             sudo chmod 777 "/home/ubuntu/atlas/logs/pr-${PR_NUM}"
+            mkdir -p "/home/ubuntu/atlas/pr_data/pr-${PR_NUM}"
+            sudo chmod 777 "/home/ubuntu/atlas/pr_data/pr-${PR_NUM}"
+
+            echo "📋 Initializing user database for PR container..."
+            if [ -f /home/ubuntu/atlas/data/users_current.sqlite ]; then
+              cp /home/ubuntu/atlas/data/users_current.sqlite "/home/ubuntu/atlas/pr_data/pr-${PR_NUM}/users_current.sqlite"
+              sudo chmod 666 "/home/ubuntu/atlas/pr_data/pr-${PR_NUM}/users_current.sqlite"
+              echo "  ✓ Users database copied for PR environment"
+            else
+              echo "  ⚠️  Warning: Source database not found at /home/ubuntu/atlas/data/users_current.sqlite — user authentication will fail in this PR container"
+            fi
 
             echo "🧹 Removing existing PR container (if any)..."
             docker rm -f "$CONTAINER_NAME" || true
@@ -74,6 +85,7 @@ jobs:
               -p "${PR_PORT}:3838" \
               -e SHINY_LOG_STDERR=1 \
               -v /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro \
+              -v "/home/ubuntu/atlas/pr_data/pr-${PR_NUM}:/srv/shiny-server/data" \
               -v "/home/ubuntu/atlas/pr_cache/pr-${PR_NUM}:/srv/shiny-server/atlas/app_cache" \
               -v "/home/ubuntu/atlas/logs/pr-${PR_NUM}:/var/log/shiny-server" \
               "atlas:pr-${PR_NUM}"
