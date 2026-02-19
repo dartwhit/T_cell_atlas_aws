@@ -65,7 +65,15 @@ server <- function(input, output, session) {
   # Get the path to the selected spatial data
   spatial_data_path <- reactive({
     req(input$spatial_study_selector)
-    paste0(inDir, dataset_files[[input$spatial_study_selector]][["spatial_seurat"]])
+    study <- input$spatial_study_selector
+    path <- paste0(inDir, dataset_files[[study]][["spatial_seurat"]])
+    cat("Spatial data requested for study:", study, "\n", file = stderr())
+    cat("  Constructed path:", path, "\n", file = stderr())
+    cat("  File exists:", file.exists(path), "\n", file = stderr())
+    if (!file.exists(path)) {
+      showNotification(paste("Spatial data file not found:", path), type = "error", duration = NULL)
+    }
+    path
   })
 
     spatial_server(

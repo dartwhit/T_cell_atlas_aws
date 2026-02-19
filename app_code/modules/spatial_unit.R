@@ -34,10 +34,22 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
 
     obj <- reactive({
       if (!is.null(spat_obj)) {
+        cat("Loading spatial object from spat_obj parameter\n", file = stderr())
         spat_obj
       } else {
         req(rds_path())
-        readRDS(rds_path())
+        cat("Loading spatial object from path:", rds_path(), "\n", file = stderr())
+        tryCatch({
+          loaded_obj <- readRDS(rds_path())
+          cat("✓ Spatial object loaded successfully\n", file = stderr())
+          cat("  - Images:", paste(names(loaded_obj@images), collapse = ", "), "\n", file = stderr())
+          cat("  - Assays:", paste(names(loaded_obj@assays), collapse = ", "), "\n", file = stderr())
+          loaded_obj
+        }, error = function(e) {
+          cat("✗ Error loading spatial object:", e$message, "\n", file = stderr())
+          showNotification(paste("Error loading spatial data:", e$message), type = "error", duration = NULL)
+          NULL
+        })
       }
     })
 
@@ -75,17 +87,27 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
 
     output$umap <- renderPlot({
       req(redn(), obj())
-      DimPlot(obj(), reduction = redn(), group.by = input$group_by)
+      tryCatch({
+        DimPlot(obj(), reduction = redn(), group.by = input$group_by)
+      }, error = function(e) {
+        plot.new()
+        text(0.5, 0.5, paste("Error generating UMAP:\n", e$message), cex = 1.2, col = "red")
+      })
     })
 
     output$featureplot <- renderPlot({
       req(obj(), input$feature)
-      plot_obj <- obj()
-      DefaultAssay(plot_obj) <- "SCT"
-      FeaturePlot(
-        plot_obj, features = input$feature,
-        reduction = redn()
-      )
+      tryCatch({
+        plot_obj <- obj()
+        DefaultAssay(plot_obj) <- "SCT"
+        FeaturePlot(
+          plot_obj, features = input$feature,
+          reduction = redn()
+        )
+      }, error = function(e) {
+        plot.new()
+        text(0.5, 0.5, paste("Error generating feature plot:\n", e$message), cex = 1.2, col = "red")
+      })
     })
     
     # ---- Sample-centric dynamic grid ----
@@ -143,24 +165,36 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
           
           # Reactive for DimPlot
           dim_plot_reactive <- reactive({
-            size_val_multiplier <- input[[slider_id]]
-            if (is.null(size_val_multiplier)) size_val_multiplier <- 1.0
-            default_size <- default_pt_sizes()[s_local]
-            final_size <- default_size * size_val_multiplier
-            grp <- if (!is.null(input$group_by)) input$group_by else NULL
-            SpatialDimPlot(obj(), images = s_local, group.by = grp, pt.size.factor = final_size)
+            tryCatch({
+              size_val_multiplier <- input[[slider_id]]
+              if (is.null(size_val_multiplier)) size_val_multiplier <- 1.0
+              default_size <- default_pt_sizes()[s_local]
+              final_size <- default_size * size_val_multiplier
+              grp <- if (!is.null(input$group_by)) input$group_by else NULL
+              SpatialDimPlot(obj(), images = s_local, group.by = grp, pt.size.factor = final_size)
+            }, error = function(e) {
+              cat("Error in SpatialDimPlot for sample", s_local, ":", e$message, "\n")
+              plot.new()
+              text(0.5, 0.5, paste("Error:\n", e$message), cex = 1, col = "red")
+            })
           })
           
           # Reactive for FeaturePlot
           feat_plot_reactive <- reactive({
             req(input$feature)
-            size_val_multiplier <- input[[slider_id]]
-            if (is.null(size_val_multiplier)) size_val_multiplier <- 1.0
-            default_size <- default_pt_sizes()[s_local]
-            final_size <- default_size * size_val_multiplier
-            plot_obj <- obj()
-            DefaultAssay(plot_obj) <- "SCT"
-            SpatialFeaturePlot(plot_obj, images = s_local, features = input$feature, pt.size.factor = final_size)
+            tryCatch({
+              size_val_multiplier <- input[[slider_id]]
+              if (is.null(size_val_multiplier)) size_val_multiplier <- 1.0
+              default_size <- default_pt_sizes()[s_local]
+              final_size <- default_size * size_val_multiplier
+              plot_obj <- obj()
+              DefaultAssay(plot_obj) <- "SCT"
+              SpatialFeaturePlot(plot_obj, images = s_local, features = input$feature, pt.size.factor = final_size)
+            }, error = function(e) {
+              cat("Error in SpatialFeaturePlot for sample", s_local, ":", e$message, "\n")
+              plot.new()
+              text(0.5, 0.5, paste("Error:\n", e$message), cex = 1, col = "red")
+            })
           })
 
           # Render plots
