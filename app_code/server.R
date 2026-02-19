@@ -523,9 +523,14 @@ server <- function(input, output, session) {
       return(new_gene_queried())
     }
     
-    if (!sidebar_inputs$use_textinput() && length(sidebar_inputs$gene_select()) > 0) {
+    # Safety check: sidebar_inputs may not exist or be NULL on spatial page
+    if (is.null(sidebar_inputs)) {
+      return(NULL)
+    }
+    
+    if (isTRUE(!sidebar_inputs$use_textinput()) && length(sidebar_inputs$gene_select()) > 0) {
       return(sidebar_inputs$gene_select())
-    } else if (sidebar_inputs$use_textinput() && nchar(sidebar_inputs$gene_input()) > 0) {
+    } else if (isTRUE(sidebar_inputs$use_textinput()) && nchar(sidebar_inputs$gene_input()) > 0) {
       # Splitting by comma, tab, space, or newline
       genes <- unlist(strsplit(sidebar_inputs$gene_input(), "[,\n]+"))
       genes <- genes[genes != ""]  # Remove any empty strings
@@ -540,10 +545,14 @@ server <- function(input, output, session) {
       return(NULL)
     }
     if (isTRUE(input$update_gene_queried)){
-      if(sidebar_inputs$feature_type() == "Pathways"){
+      if(!is.null(sidebar_inputs) && sidebar_inputs$feature_type() == "Pathways"){
         return(new_gene_queried())
         
       }
+    }
+    # Safety check: sidebar_inputs may not exist or be NULL on spatial page
+    if (is.null(sidebar_inputs)) {
+      return(NULL)
     }
     if (length(sidebar_inputs$pathway_select()) > 0) {
       return(sidebar_inputs$pathway_select())

@@ -35,7 +35,15 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
     obj <- reactive({
       if (!is.null(spat_obj)) {
         cat("Loading spatial object from spat_obj parameter\n", file = stderr())
-        spat_obj
+        # Update object to ensure compatibility
+        tryCatch({
+          updated_obj <- UpdateSeuratObject(spat_obj)
+          cat("✓ Seurat object updated\n", file = stderr())
+          updated_obj
+        }, error = function(e) {
+          cat("Warning: Could not update Seurat object:", e$message, "\n", file = stderr())
+          spat_obj
+        })
       } else {
         req(rds_path())
         cat("Loading spatial object from path:", rds_path(), "\n", file = stderr())
@@ -44,9 +52,14 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
           cat("✓ Spatial object loaded successfully\n", file = stderr())
           cat("  - Images:", paste(names(loaded_obj@images), collapse = ", "), "\n", file = stderr())
           cat("  - Assays:", paste(names(loaded_obj@assays), collapse = ", "), "\n", file = stderr())
-          loaded_obj
+          
+          # Update object to ensure compatibility with current Seurat version
+          cat("Updating Seurat object...\n", file = stderr())
+          updated_obj <- UpdateSeuratObject(loaded_obj)
+          cat("✓ Seurat object updated for compatibility\n", file = stderr())
+          updated_obj
         }, error = function(e) {
-          cat("✗ Error loading spatial object:", e$message, "\n", file = stderr())
+          cat("✗ Error loading/updating spatial object:", e$message, "\n", file = stderr())
           showNotification(paste("Error loading spatial data:", e$message), type = "error", duration = NULL)
           NULL
         })
