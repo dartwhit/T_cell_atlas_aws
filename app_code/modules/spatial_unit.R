@@ -130,7 +130,14 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
     output$umap <- renderPlot({
       req(redn(), obj())
       tryCatch({
-        DimPlot(obj(), reduction = redn(), group.by = input$group_by)
+        plot_obj <- obj()
+        # Set appropriate assay for plotting
+        if ("SCT" %in% names(plot_obj@assays)) {
+          DefaultAssay(plot_obj) <- "SCT"
+        } else if ("Spatial" %in% names(plot_obj@assays)) {
+          DefaultAssay(plot_obj) <- "Spatial"
+        }
+        DimPlot(plot_obj, reduction = redn(), group.by = input$group_by)
       }, error = function(e) {
         plot.new()
         text(0.5, 0.5, paste("Error generating UMAP:\n", e$message), cex = 1.2, col = "red")
@@ -220,7 +227,16 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
               default_size <- default_pt_sizes()[s_local]
               final_size <- default_size * size_val_multiplier
               grp <- if (!is.null(input$group_by)) input$group_by else NULL
-              SpatialDimPlot(obj(), images = s_local, group.by = grp, pt.size.factor = final_size)
+              
+              plot_obj <- obj()
+              # Set appropriate assay for spatial plotting
+              if ("SCT" %in% names(plot_obj@assays)) {
+                DefaultAssay(plot_obj) <- "SCT"
+              } else if ("Spatial" %in% names(plot_obj@assays)) {
+                DefaultAssay(plot_obj) <- "Spatial"
+              }
+              
+              SpatialDimPlot(plot_obj, images = s_local, group.by = grp, pt.size.factor = final_size)
             }, error = function(e) {
               cat("Error in SpatialDimPlot for sample", s_local, ":", e$message, "\n")
               plot.new()

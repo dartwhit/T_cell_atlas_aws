@@ -33,7 +33,7 @@ obj <- readRDS(input_file)
 cat("Original object info:\n")
 cat("  - Images:", paste(names(obj@images), collapse = ", "), "\n")
 cat("  - Assays:", paste(names(obj@assays), collapse = ", "), "\n")
-cat("  - Seurat version (stored):", slot(obj, "version"), "\n\n")
+cat("  - Seurat version (stored):", as.character(slot(obj, "version")), "\n\n")
 
 # Update the object
 cat("Updating Seurat object...\n")
@@ -42,7 +42,7 @@ obj_updated <- UpdateSeuratObject(obj)
 cat("\nUpdated object info:\n")
 cat("  - Images:", paste(names(obj_updated@images), collapse = ", "), "\n")
 cat("  - Assays:", paste(names(obj_updated@assays), collapse = ", "), "\n")
-cat("  - Seurat version (updated):", slot(obj_updated, "version"), "\n\n")
+cat("  - Seurat version (updated):", as.character(slot(obj_updated, "version")), "\n\n")
 
 # Verify images are accessible
 cat("Verifying spatial images...\n")
