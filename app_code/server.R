@@ -528,9 +528,10 @@ server <- function(input, output, session) {
       return(NULL)
     }
     
-    if (isTRUE(!sidebar_inputs$use_textinput()) && length(sidebar_inputs$gene_select()) > 0) {
+    use_text <- sidebar_inputs$use_textinput()
+    if (isFALSE(use_text) && length(sidebar_inputs$gene_select()) > 0) {
       return(sidebar_inputs$gene_select())
-    } else if (isTRUE(sidebar_inputs$use_textinput()) && nchar(sidebar_inputs$gene_input()) > 0) {
+    } else if (isTRUE(use_text) && nchar(sidebar_inputs$gene_input()) > 0) {
       # Splitting by comma, tab, space, or newline
       genes <- unlist(strsplit(sidebar_inputs$gene_input(), "[,\n]+"))
       genes <- genes[genes != ""]  # Remove any empty strings
