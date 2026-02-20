@@ -151,7 +151,7 @@
         "DE_by_disease": "Ma_fib_DE_by_disease.txt",
         "VAM_by_disease": "Ma_fib_VAMcdf_DE_by_disease.txt"
       },
-      "spatial_seurat": "2025-07-07_MaSSc_Visium_PRECAST_SingleCellPredicted_RegionsNamed_CARD_updated.rds"
+      "spatial_seurat": "2025-07-07_MaSSc_Visium_PRECAST_SingleCellPredicted_RegionsNamed_CARD.rds"
     }
   },
   "khanna": {
