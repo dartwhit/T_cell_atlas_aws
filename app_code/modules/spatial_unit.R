@@ -46,8 +46,14 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
           cat("✓ Spatial object loaded successfully\n", file = stderr())
           cat("  - Images:", paste(names(loaded_obj@images), collapse = ", "), "\n", file = stderr())
           cat("  - Assays:", paste(names(loaded_obj@assays), collapse = ", "), "\n", file = stderr())
-          cat("  - RDS file was pre-updated offline\n", file = stderr())
-          loaded_obj
+          cat("  - Object version:", as.character(slot(loaded_obj, "version")), "\n", file = stderr())
+          cat("  - Current Seurat:", as.character(packageVersion("Seurat")), "\n", file = stderr())
+          
+          # Always run UpdateSeuratObject to ensure compatibility
+          cat("Running UpdateSeuratObject for server compatibility...\n", file = stderr())
+          updated_obj <- UpdateSeuratObject(loaded_obj)
+          cat("✓ Update complete\n", file = stderr())
+          updated_obj
         }, error = function(e) {
           cat("✗ Error loading/updating spatial object:", e$message, "\n", file = stderr())
           showNotification(paste("Error loading spatial data:", e$message), type = "error", duration = NULL)
