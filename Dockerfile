@@ -16,8 +16,11 @@ RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install pandas
 
-# Install R packages
-RUN R -e 'install.packages(c("plotly", "igraph", "Seurat", "Matrix", "SeuratObject", "DT", "ggplot2", "dplyr", "stringr", "shiny", "shinymanager", "shinyWidgets", "bslib", "shinycssloaders", "bsicons", "VAM", "periscope2", "shinyjs", "tidyr", "DBI", "RSQLite"))'
+# Install R packages with specific Seurat version for compatibility
+RUN R -e 'install.packages(c("plotly", "igraph", "Matrix", "DT", "ggplot2", "dplyr", "stringr", "shiny", "shinymanager", "shinyWidgets", "bslib", "shinycssloaders", "bsicons", "periscope2", "shinyjs", "tidyr", "DBI", "RSQLite"))'
+# Install Seurat 5.2.1 specifically for spatial compatibility
+RUN R -e 'install.packages("SeuratObject", repos="https://cloud.r-project.org/"); install.packages("Seurat", repos="https://cloud.r-project.org/")'
+RUN R -e 'install.packages("VAM")'
 
 # Copy Shiny app code
 COPY ./app_code/ /srv/shiny-server/atlas/
