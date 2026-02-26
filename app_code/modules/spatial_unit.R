@@ -67,18 +67,24 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
     default_pt_sizes <- reactive({
       req(obj())
       sapply(names(obj()@images), function(s) {
-        coords <- obj()@images[[s]]@coordinates
-        if (nrow(coords) < 2) return(1.6) # Default if less than 2 spots
-        dists <- as.matrix(dist(coords))
-        diag(dists) <- Inf # Set distance to self to Inf
-        min_dists <- apply(dists, 1, min)
-        d_mean <- mean(min_dists)
-        spot_radius <- obj()@images[[s]]@spot.radius
-        scale_factor <- obj()@images[[s]]@scale.factors$spot
-        
-        # Set diameter to be a fraction of the mean distance.
-        pt_size_factor <- (0.1 * d_mean) / (2 * spot_radius * scale_factor)
-        pt_size_factor
+        tryCatch({
+          coords <- obj()@images[[s]]@coordinates
+          if (nrow(coords) < 2) return(1.6) # Default if less than 2 spots
+          dists <- as.matrix(dist(coords))
+          diag(dists) <- Inf # Set distance to self to Inf
+          min_dists <- apply(dists, 1, min)
+          d_mean <- mean(min_dists)
+          spot_radius <- obj()@images[[s]]@spot.radius
+          scale_factor <- obj()@images[[s]]@scale.factors$spot
+
+          # Set diameter to be a fraction of the mean distance.
+          pt_size_factor <- (0.1 * d_mean) / (2 * spot_radius * scale_factor)
+          pt_size_factor
+        }, error = function(e) {
+          cat("⚠ default_pt_sizes failed for image '", s, "':", e$message,
+              "— using fallback 1.6\n", file = stderr())
+          1.6
+        })
       })
     })
 
@@ -188,7 +194,9 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
     
     observe({
       req(length(input$samples) > 0, default_pt_sizes())
-      
+      cat("✓ Registering sample plot handlers for:",
+          paste(input$samples, collapse = ", "), "\n", file = stderr())
+
       lapply(input$samples, function(s) {
         safe_s <- safe_id(s)
         slider_id <- paste0("pt_", safe_s)
@@ -219,7 +227,7 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
               
               SpatialDimPlot(plot_obj, images = s_local, group.by = grp, pt.size.factor = final_size)
             }, error = function(e) {
-              cat("Error in SpatialDimPlot for sample", s_local, ":", e$message, "\n")
+              cat("Error in SpatialDimPlot for sample", s_local, ":", e$message, "\n", file = stderr())
               plot.new()
               text(0.5, 0.5, paste("Error:\n", e$message), cex = 1, col = "red")
             })

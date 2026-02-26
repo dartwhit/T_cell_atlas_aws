@@ -81,7 +81,7 @@ server <- function(input, output, session) {
     rds_path = spatial_data_path
   )
 
-  options(shiny.trace = FALSE, shiny.fullstacktrace = FALSE, shiny.sanitize.errors = TRUE)
+  options(shiny.trace = FALSE, shiny.fullstacktrace = FALSE, shiny.sanitize.errors = FALSE)
 
   selected_study_from_gallery <- dataset_gallery_server("gallery_module")
 
