@@ -224,7 +224,19 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
               } else if ("Spatial" %in% names(plot_obj@assays)) {
                 DefaultAssay(plot_obj) <- "Spatial"
               }
-              
+
+              # Fix cell-image alignment: PRECAST integration may leave image
+              # spots (barcodes) that no longer exist in the object after
+              # filtering/deconvolution. Trim the image coordinates to only the
+              # spots that are actually present in the object.
+              img_cells <- rownames(plot_obj@images[[s_local]]@coordinates)
+              obj_cells <- Cells(plot_obj)
+              if (!all(img_cells %in% obj_cells)) {
+                keep <- img_cells %in% obj_cells
+                plot_obj@images[[s_local]]@coordinates <-
+                  plot_obj@images[[s_local]]@coordinates[keep, , drop = FALSE]
+              }
+
               SpatialDimPlot(plot_obj, images = s_local, group.by = grp, pt.size.factor = final_size)
             }, error = function(e) {
               cat("Error in SpatialDimPlot for sample", s_local, ":", e$message, "\n", file = stderr())
@@ -250,6 +262,16 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
               } else {
                 DefaultAssay(plot_obj) <- "RNA"
               }
+
+              # Fix cell-image alignment (same as DimPlot — see comment above)
+              img_cells <- rownames(plot_obj@images[[s_local]]@coordinates)
+              obj_cells <- Cells(plot_obj)
+              if (!all(img_cells %in% obj_cells)) {
+                keep <- img_cells %in% obj_cells
+                plot_obj@images[[s_local]]@coordinates <-
+                  plot_obj@images[[s_local]]@coordinates[keep, , drop = FALSE]
+              }
+
               SpatialFeaturePlot(plot_obj, images = s_local, features = input$feature, pt.size.factor = final_size)
             }, error = function(e) {
               cat("Error in SpatialFeaturePlot for sample", s_local, ":", e$message, "\n", file = stderr())
