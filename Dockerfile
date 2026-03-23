@@ -18,32 +18,10 @@ RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install pandas
 
-# Install R packages — wrapper ensures the build fails loudly if any package
-# is missing after install (install.packages() only warns on failure by default)
-RUN R -e '
-  install_required <- function(pkgs) {
-    install.packages(pkgs)
-    missing <- pkgs[!pkgs %in% rownames(installed.packages())]
-    if (length(missing)) stop("Failed to install: ", paste(missing, collapse = ", "))
-    invisible(NULL)
-  }
-  install_required(c(
-    "plotly", "igraph", "Matrix", "DT", "ggplot2", "dplyr", "stringr",
-    "shiny", "shinymanager", "shinyWidgets", "bslib", "shinycssloaders",
-    "bsicons", "periscope2", "shinyjs", "tidyr", "DBI", "RSQLite",
-    "jsonlite", "png"
-  ))
-'
-# Install Seurat ecosystem separately (large; keep in its own layer)
-RUN R -e '
-  install.packages(c("SeuratObject", "Seurat"), repos="https://cloud.r-project.org/")
-  missing <- c("SeuratObject", "Seurat")[!c("SeuratObject", "Seurat") %in% rownames(installed.packages())]
-  if (length(missing)) stop("Failed to install: ", paste(missing, collapse = ", "))
-'
-RUN R -e '
-  install.packages("VAM")
-  if (!"VAM" %in% rownames(installed.packages())) stop("Failed to install VAM")
-'
+# Copy and run the package install script — fails the build loudly if any
+# package is missing after install (install.packages() only warns by default)
+COPY install_packages.R /tmp/install_packages.R
+RUN Rscript /tmp/install_packages.R
 
 # Copy Shiny app code
 COPY ./app_code/ /srv/shiny-server/atlas/
