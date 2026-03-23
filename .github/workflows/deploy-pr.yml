@@ -10,6 +10,7 @@ on:
 jobs:
   deploy-pr:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     # Need write access to add PR comments
     permissions:
@@ -39,6 +40,7 @@ jobs:
           command_timeout: 30m
           script: |
             set -euo pipefail
+            set -x
 
             PR_NUM=${{ github.event.pull_request.number }}
             PR_PORT=${{ steps.port.outputs.pr_port }}
@@ -75,8 +77,9 @@ jobs:
             CID=$(docker ps --filter "publish=${PR_PORT}" --format "{{.ID}}")
             [ -n "${CID:-}" ] && docker stop "$CID" && docker rm "$CID" || true
 
-            echo "🛠 Building PR image..."
-            docker build --no-cache -t "atlas:pr-${PR_NUM}" .
+            echo "🛠 Building PR image (streaming output)..."
+            # Use plain progress mode so build output is streamed to GitHub Actions logs
+            docker build --no-cache --progress=plain -t "atlas:pr-${PR_NUM}" .
 
             echo "🚀 Running PR container on port ${PR_PORT}..."
             docker run -d \

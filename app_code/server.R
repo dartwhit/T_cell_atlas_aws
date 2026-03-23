@@ -1,6 +1,13 @@
 cat("✅ server.R initialized at", Sys.time(), "\n", file = stderr())
 
 library(shiny)
+## Ensure AUTH_ENABLED is defined when server.R is sourced directly
+if (!exists("AUTH_ENABLED")) {
+  AUTH_ENABLED <- FALSE
+  cat("AUTH_ENABLED not set; defaulting to FALSE\n", file = stderr())
+} else {
+  cat("AUTH_ENABLED:", as.character(AUTH_ENABLED), "\n", file = stderr())
+}
 if (AUTH_ENABLED) library(shinymanager)
 library(Seurat)
 library(DT)
