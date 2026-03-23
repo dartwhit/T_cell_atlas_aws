@@ -1,11 +1,13 @@
 FROM rocker/shiny:latest
 
-# Install dependencies
+# Install dependencies (including libpng/libjpeg for Seurat spatial image rendering)
 RUN apt-get update && apt-get install -y \
     libcurl4-gnutls-dev \
     libssl-dev \
     libxml2-dev \
     libglpk-dev \
+    libpng-dev \
+    libjpeg-dev \
     python3 python3-pip python3-venv \
     vim nano \
     curl \
@@ -20,7 +22,8 @@ RUN pip install pandas
 RUN R -e 'install.packages(c("plotly", "igraph", "Matrix", "DT", "ggplot2", "dplyr", "stringr", "shiny", "shinymanager", "shinyWidgets", "bslib", "shinycssloaders", "bsicons", "periscope2", "shinyjs", "tidyr", "DBI", "RSQLite"))'
 # Install Seurat 5.2.1 specifically for spatial compatibility
 RUN R -e 'install.packages("SeuratObject", repos="https://cloud.r-project.org/"); install.packages("Seurat", repos="https://cloud.r-project.org/")'
-RUN R -e 'install.packages("VAM")'
+# png package is required for Seurat spatial image rendering (SpatialDimPlot/SpatialFeaturePlot)
+RUN R -e 'install.packages(c("png", "VAM"))'
 
 # Copy Shiny app code
 COPY ./app_code/ /srv/shiny-server/atlas/
