@@ -9,7 +9,7 @@
 #test change
 
 library(shiny)
-library(shinymanager)
+if (AUTH_ENABLED) library(shinymanager)
 library(shinyWidgets)
 library(bslib)
 library(shinycssloaders)
@@ -219,6 +219,6 @@ ui <- page_navbar(
 )
 
 # Wrap UI with shinymanager authentication
-ui <- secure_app(ui, enable_admin = TRUE)
+if (AUTH_ENABLED) ui <- secure_app(ui, enable_admin = TRUE)
 
 
