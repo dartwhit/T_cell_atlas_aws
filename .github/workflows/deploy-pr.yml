@@ -40,7 +40,6 @@ jobs:
           command_timeout: 30m
           script: |
             set -euo pipefail
-            set -x
 
             PR_NUM=${{ github.event.pull_request.number }}
             PR_PORT=${{ steps.port.outputs.pr_port }}
@@ -78,14 +77,7 @@ jobs:
             [ -n "${CID:-}" ] && docker stop "$CID" && docker rm "$CID" || true
 
             echo "🛠 Building PR image..."
-            # Prefer buildx for streamed output; fall back to legacy docker build if unavailable
-            if docker buildx version >/dev/null 2>&1; then
-              echo "Using docker buildx (streamed output)"
-              docker buildx build --load --no-cache --progress=plain -t "atlas:pr-${PR_NUM}" .
-            else
-              echo "Buildx not available; using legacy docker build (no --progress)"
-              docker build --no-cache -t "atlas:pr-${PR_NUM}" .
-            fi
+            docker build --no-cache -t "atlas:pr-${PR_NUM}" .
 
             echo "🚀 Running PR container on port ${PR_PORT}..."
             docker run -d \
