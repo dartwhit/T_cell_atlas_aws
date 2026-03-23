@@ -8,6 +8,9 @@
 #
 #test change
 
+## Ensure AUTH_ENABLED is always defined (shiny-server may source ui.R without app.R)
+if (!exists("AUTH_ENABLED")) AUTH_ENABLED <- FALSE
+
 library(shiny)
 if (AUTH_ENABLED) library(shinymanager)
 library(shinyWidgets)
