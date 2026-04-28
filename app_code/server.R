@@ -511,7 +511,7 @@ server <- function(input, output, session) {
     if (reset_trigger()) {
       return(NULL)
     }
-    if (input$update_gene_queried){
+    if (isTRUE(input$update_gene_queried)){
       new_gene_queried()
     }
     
@@ -531,7 +531,7 @@ server <- function(input, output, session) {
     if (reset_trigger()) {
       return(NULL)
     }
-    if (input$update_gene_queried){
+    if (isTRUE(input$update_gene_queried)){
       if(sidebar_inputs$feature_type() == "Pathways"){
         new_gene_queried()
         
