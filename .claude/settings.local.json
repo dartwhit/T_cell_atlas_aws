@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git push *)",
+      "Bash(gh pr create --title 'fix: add missing image libraries for spatial plot rendering' --body ' *)"
+    ]
+  }
+}
