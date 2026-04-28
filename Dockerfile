@@ -8,7 +8,6 @@ RUN apt-get update && apt-get install -y \
     libglpk-dev \
     libjpeg-dev \
     libpng-dev \
-    libtiff-dev \
     python3 python3-pip python3-venv \
     vim nano \
     curl \
