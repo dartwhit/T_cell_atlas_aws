@@ -6,6 +6,8 @@ RUN apt-get update && apt-get install -y \
     libssl-dev \
     libxml2-dev \
     libglpk-dev \
+    libjpeg-dev \
+    libpng-dev \
     python3 python3-pip python3-venv \
     vim nano \
     curl \
@@ -17,7 +19,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install pandas
 
 # Install R packages
-RUN R -e 'install.packages(c("plotly", "igraph", "Seurat", "Matrix", "SeuratObject", "DT", "ggplot2", "dplyr", "stringr", "shiny", "shinymanager", "shinyWidgets", "bslib", "shinycssloaders", "bsicons", "VAM", "periscope2", "shinyjs", "tidyr", "DBI", "RSQLite"))'
+RUN R -e 'install.packages(c("plotly", "igraph", "Seurat", "Matrix", "SeuratObject", "DT", "ggplot2", "dplyr", "stringr", "shiny", "shinymanager", "shinyWidgets", "bslib", "shinycssloaders", "bsicons", "VAM", "periscope2", "shinyjs", "tidyr", "DBI", "RSQLite", "jpeg", "png"))'
 
 # Copy Shiny app code
 COPY ./app_code/ /srv/shiny-server/atlas/
