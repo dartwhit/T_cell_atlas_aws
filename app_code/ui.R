@@ -27,10 +27,15 @@ source("modules/explore_sidebar_module.R")
 
 
 # Feature plot of queried genes
-card_feature <-card("Featureplot of selected genes",
-                          withSpinner(
-                            uiOutput("featurePlot_UI")
-                          )
+card_feature <- card("Featureplot of selected genes",
+                     withSpinner(
+                       uiOutput("featurePlot_UI")
+                     ),
+                     div(id = "feature_download_controls",
+                       style = "display:none;",
+                       selectInput("file_type_1", "Plot format", choices = c("png", "pdf", "jpg")),
+                       downloadButton("dld_feature_plot", "Download")
+                     )
 )
 # UMAP
 card_umap <- card("UMAP of the dataset",
