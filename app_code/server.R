@@ -783,39 +783,16 @@ server <- function(input, output, session) {
 
   output$dld_feature_plot <- downloadHandler(
     filename = function(){
-      generated_filename <- paste0("featureplot.",input$file_type_1)
-      print(paste("Generated filename:", generated_filename))
-      return(generated_filename)  # Ensure the filename is returned
-      "featureplot.pdf"
+      paste0("featureplot.", input$file_type_1)
     },
     content = function(file){
-      filetype <- tools::file_ext(file)
+      filetype <- input$file_type_1
       if (sidebar_inputs$feature_type() == "Genes") {
-        p <- plot(featureplot_plot_gene())
+        p <- featureplot_plot_gene()
       } else {
-        p <- plot(featureplot_plot_pathway())
+        p <- featureplot_plot_pathway()
       }
-      
-      ggsave(file,plot = p, device = filetype)
-      
-    
-      # 
-      # if (filetype == "png"){
-      #   png(file)
-      #   print("here")
-      #   p
-      #   dev.off()
-      # }else if (filetype == "pdf"){
-      #   pdf(file)
-      # }else if (filetype == "jpg"){
-      #   jpeg(file)
-      # }
-      png(file)
-      print("here")
-      p
-      dev.off()
-
-      print(paste("File type:", filetype))
+      ggsave(file, plot = p, device = filetype)
     }
   )
 
