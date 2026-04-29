@@ -665,12 +665,10 @@ server <- function(input, output, session) {
   
   output$featurePlot_UI <- renderUI({
     if (!is.null(gene_queried()) || !is.null(pathway_queried())) {
-      tagList(
-        plotOutput("featurePlot"),
-        downloadButton("dld_feature_plot", "Download"),
-        selectInput("file_type_1", "Plot format", choices = c("png", "pdf", "jpg"))
-      )
+      shinyjs::show("feature_download_controls")
+      plotOutput("featurePlot")
     } else {
+      shinyjs::hide("feature_download_controls")
       textOutput("featurePlot_msg")
     }
   })
