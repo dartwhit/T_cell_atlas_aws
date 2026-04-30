@@ -154,14 +154,6 @@
       "spatial_seurat": "2025-07-07_MaSSc_Visium_PRECAST_SingleCellPredicted_RegionsNamed_CARD.rds"
     }
   },
-  "li": {
-    "comparison_type": "disease",
-    "comparison_label": "SSc vs Healthy",
-    "data_levels": {},
-    "files": {
-      "spatial_seurat": "spat_Li_RCTD_TMKMHdecon.rds"
-    }
-  },
   "khanna": {
     "comparison_type": "timepoint",
     "comparison_label": "After vs Before Treatment",
