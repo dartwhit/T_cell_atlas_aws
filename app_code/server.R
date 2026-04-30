@@ -52,9 +52,10 @@ server <- function(input, output, session) {
 
 
 
-  # Get studies with spatial data
+  # Get studies with spatial data (named vector: display name → id)
   studies_with_spatial <- reactive({
-    names(dataset_files)[sapply(dataset_files, function(x) !is.null(x$spatial_seurat))]
+    ids <- names(dataset_files)[sapply(dataset_files, function(x) !is.null(x$spatial_seurat))]
+    dataset_choices[dataset_choices %in% ids]
   })
   
   # Update the spatial study selector
