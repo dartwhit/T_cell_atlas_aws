@@ -61,3 +61,9 @@ for (i in 1:nrow(dataset_meta)) {
 
 # Create a named vector of dataset choices for use in UI dropdowns
 dataset_choices <- setNames(dataset_meta$id, dataset_meta$name)
+
+# scRNA-only choices for the Explore sidebar (excludes spatial-only datasets)
+scrna_dataset_choices <- setNames(
+  dataset_meta$id[dataset_meta$has_scrna],
+  dataset_meta$name[dataset_meta$has_scrna]
+)
