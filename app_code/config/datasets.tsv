@@ -4,4 +4,4 @@ tabib	Tabib et al. 2021	RNA	40338	Tabib_full_filtered_VAM.rds	imgs/Tabib_img.png
 gur	Gur et al. 2022	RNA	26713	Gur_full_filtered_VAM.rds	imgs/Gur_img.png	immune	Gur dataset.	TRUE	FALSE
 ma	Ma et al. 2024	RNA	73926	Ma_filtered_reduced_2025-01-28_VAM.rds	imgs/Ma_img.png	mye,fib	Ma dataset.	TRUE	TRUE
 khanna	Khanna et al. 2022	RNA	34915	Khanna_filtered_reduced_2025-01-28_VAM.rds	imgs/Khanna_img.png	fib,mye	Khanna dataset.	TRUE	FALSE
-li	Li et al. 2024	RNA	6379	Li_full_spat.rds	imgs/Li_img.png	fib	Li dataset.	FALSE	TRUE
+li	Li et al. 2024	RNA	6379	Li_full_spat.rds	imgs/Li_img.png	fib	Li et al. 2024 spatial transcriptomics dataset of SSc skin.	FALSE	TRUE
