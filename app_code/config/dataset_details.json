@@ -198,7 +198,7 @@
     "comparison_label": "SSc vs Healthy",
     "data_levels": {},
     "files": {
-      "spatial_seurat": "spat_Li_RCTD_TMKMHdecon.rds"
+      "spatial_seurat": "Li_full_spat.rds"
     }
   }
 }
