@@ -367,10 +367,15 @@ server <- function(input, output, session) {
     req(loaded_gene_list)
     gene_list_obj(loaded_gene_list)
 
-    vam_names <- rownames(seurat_obj()@assays$VAMcdf)
-    pathway_names_for_display <- str_remove(vam_names,"HALLMARK-")
-    pathway_choices <- setNames(vam_names, pathway_names_for_display)
-    pathway_list(pathway_choices)
+    if (!is.null(seurat_obj()@assays$VAMcdf)) {
+      vam_names <- rownames(seurat_obj()@assays$VAMcdf)
+      pathway_names_for_display <- str_remove(vam_names, "HALLMARK-")
+      pathway_choices <- setNames(vam_names, pathway_names_for_display)
+      pathway_list(pathway_choices)
+    } else {
+      cat("Note: VAMcdf assay not found in", sidebar_inputs$study(), sidebar_inputs$data_level(), "\n", file = stderr())
+      pathway_list(NULL)
+    }
     
     
     # Try loading metadata,
