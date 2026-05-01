@@ -341,10 +341,32 @@ server <- function(input, output, session) {
 
     ################## Load data ##################
     # Seurat object and gene lists
-    print(seurat_path)
-    seurat_obj(readRDS(seurat_path))
-    gene_list_obj(readRDS(gene_list_path))
-    
+    cat("Loading Seurat object from:", seurat_path, "\n", file = stderr())
+    loaded_seurat <- tryCatch(
+      readRDS(seurat_path),
+      error = function(e) {
+        msg <- paste("Failed to load Seurat object:", conditionMessage(e), "\nPath:", seurat_path)
+        cat(msg, "\n", file = stderr())
+        showNotification(msg, type = "error", duration = NULL)
+        NULL
+      }
+    )
+    req(loaded_seurat)
+    seurat_obj(loaded_seurat)
+
+    cat("Loading gene list from:", gene_list_path, "\n", file = stderr())
+    loaded_gene_list <- tryCatch(
+      readRDS(gene_list_path),
+      error = function(e) {
+        msg <- paste("Failed to load gene list:", conditionMessage(e), "\nPath:", gene_list_path)
+        cat(msg, "\n", file = stderr())
+        showNotification(msg, type = "error", duration = NULL)
+        NULL
+      }
+    )
+    req(loaded_gene_list)
+    gene_list_obj(loaded_gene_list)
+
     vam_names <- rownames(seurat_obj()@assays$VAMcdf)
     pathway_names_for_display <- str_remove(vam_names,"HALLMARK-")
     pathway_choices <- setNames(vam_names, pathway_names_for_display)
