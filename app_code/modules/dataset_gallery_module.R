@@ -24,6 +24,7 @@ dataset_gallery_server <- function(id) {
     ns <- session$ns
 
     filtered_datasets <- reactive({
+      req(input$assay)
       data <- dataset_meta
       
       # Filter by assay type
