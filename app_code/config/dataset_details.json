@@ -192,5 +192,13 @@
       },
       "spatial_seurat": null
     }
+  },
+  "li": {
+    "comparison_type": "disease",
+    "comparison_label": "SSc vs Healthy",
+    "data_levels": {},
+    "files": {
+      "spatial_seurat": "Li_full_spat.rds"
+    }
   }
 }

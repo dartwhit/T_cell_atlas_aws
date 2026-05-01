@@ -52,9 +52,10 @@ server <- function(input, output, session) {
 
 
 
-  # Get studies with spatial data
+  # Get studies with spatial data (named vector: display name → id)
   studies_with_spatial <- reactive({
-    names(dataset_files)[sapply(dataset_files, function(x) !is.null(x$spatial_seurat))]
+    ids <- names(dataset_files)[sapply(dataset_files, function(x) !is.null(x$spatial_seurat))]
+    dataset_choices[dataset_choices %in% ids]
   })
   
   # Update the spatial study selector
@@ -515,9 +516,9 @@ server <- function(input, output, session) {
       new_gene_queried()
     }
     
-    if (!sidebar_inputs$use_textinput() && length(sidebar_inputs$gene_select()) > 0) {
+    if (!isTRUE(sidebar_inputs$use_textinput()) && length(sidebar_inputs$gene_select()) > 0) {
       return(sidebar_inputs$gene_select())
-    } else if (sidebar_inputs$use_textinput() && nchar(sidebar_inputs$gene_input()) > 0) {
+    } else if (isTRUE(sidebar_inputs$use_textinput()) && nchar(sidebar_inputs$gene_input()) > 0) {
       # Splitting by comma, tab, space, or newline
       genes <- unlist(strsplit(sidebar_inputs$gene_input(), "[,\n]+"))
       genes <- genes[genes != ""]  # Remove any empty strings
