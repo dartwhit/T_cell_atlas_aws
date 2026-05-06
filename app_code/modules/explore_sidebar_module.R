@@ -38,17 +38,35 @@ explore_sidebar_UI <- function(id, choices) {
             condition = "input.feature_type == 'Genes'",
             ns = ns,
             checkboxInput(ns("use_textinput"), "Use my own gene list", value = FALSE),
-            
+
             conditionalPanel(
               condition = "input.use_textinput == 0",
               ns = ns,
               selectizeInput(ns("gene_select"),"Select a gene", choices = NULL, multiple = TRUE)
             ),
-            
+
             conditionalPanel(
               condition = "input.use_textinput == 1",
               ns = ns,
-              textAreaInput(ns("gene_input"), "Paste gene list:")
+              textAreaInput(
+                ns("gene_input"),
+                "Paste gene list:",
+                placeholder = "One gene per line, or separated by commas, tabs, semicolons, or spaces"
+              ),
+              fileInput(
+                ns("gene_file"),
+                "Or upload a gene list file (.txt or .csv):",
+                accept = c("text/plain", "text/csv", ".txt", ".csv"),
+                placeholder = "No file selected"
+              ),
+              actionBttn(
+                ns("apply_gene_list"),
+                "Apply Gene List",
+                style = "simple",
+                color = "primary",
+                size  = "sm"
+              ),
+              uiOutput(ns("gene_validation_msg"))
             )
           ),
           
@@ -96,19 +114,23 @@ explore_sidebar_server <- function(id, selected_study_from_gallery) {
 
     return(
       list(
-        study = reactive(input$study),
-        data_level = reactive(input$data_level),
-        anno = reactive(input$anno),
-        load_btn = reactive(input$load_btn),
-        feature_type = reactive(input$feature_type),
-        use_textinput = reactive(input$use_textinput),
-        gene_select = reactive(input$gene_select),
-        gene_input = reactive(input$gene_input),
+        study             = reactive(input$study),
+        data_level        = reactive(input$data_level),
+        anno              = reactive(input$anno),
+        load_btn          = reactive(input$load_btn),
+        feature_type      = reactive(input$feature_type),
+        use_textinput     = reactive(input$use_textinput),
+        gene_select       = reactive(input$gene_select),
+        gene_input        = reactive(input$gene_input),
+        gene_file         = reactive(input$gene_file),
+        apply_gene_list   = reactive(input$apply_gene_list),
         use_textinput_VAM = reactive(input$use_textinput_VAM),
-        pathway_select = reactive(input$pathway_select),
-        geneset_name = reactive(input$geneset_name),
-        VAM_geneset = reactive(input$VAM_geneset),
-        submit_geneset = reactive(input$submit_geneset)
+        pathway_select    = reactive(input$pathway_select),
+        geneset_name      = reactive(input$geneset_name),
+        VAM_geneset       = reactive(input$VAM_geneset),
+        submit_geneset    = reactive(input$submit_geneset),
+        # expose ns so server.R can render gene_validation_msg
+        ns                = ns
       )
     )
   })
