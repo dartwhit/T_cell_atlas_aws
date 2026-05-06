@@ -7,11 +7,12 @@ dataset_gallery_UI <- function(id) {
   layout_sidebar(
     sidebar = sidebar(
       textInput(ns("search"), "Search"),
-      radioGroupButtons(
-        ns("assay"), 
-        label = "Assay", 
+      radioButtons(
+        ns("assay"),
+        label = "Assay",
         choices = c("All", "scRNA-seq", "Spatial"),
-        selected = "All"
+        selected = "All",
+        inline = TRUE
       )
     ),
     uiOutput(ns("gallery"))
@@ -24,18 +25,18 @@ dataset_gallery_server <- function(id) {
     ns <- session$ns
 
     filtered_datasets <- reactive({
-      req(input$assay)
+      assay_filter <- input$assay %||% "All"
       data <- dataset_meta
       
       # Filter by assay type
-      if (input$assay == "scRNA-seq") {
+      if (assay_filter == "scRNA-seq") {
         data <- data[data$has_scrna, ]
-      } else if (input$assay == "Spatial") {
+      } else if (assay_filter == "Spatial") {
         data <- data[data$has_spatial, ]
       }
 
       # Filter by search term
-      if (nzchar(input$search)) {
+      if (nzchar(input$search %||% "")) {
         term <- tolower(input$search)
         data <- data[
           grepl(term, tolower(data$name)) |

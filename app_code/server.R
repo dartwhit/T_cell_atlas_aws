@@ -873,7 +873,7 @@ server <- function(input, output, session) {
       # Show default dot plot or violin plot
       if (length(feature_names) <= 3) {
         # Show a violin plot for <= 3 features
-        if (is.null(input$plot_type) || input$plot_type) { # Default to VlnPlot
+        if (is.null(input$plot_type) || input$plot_type != "box") { # Default to VlnPlot
           assay_to_use <- if (f_type == "Genes") {
             if ("SCT" %in% Assays(curr_obj)) "SCT" else "RNA"
           } else {

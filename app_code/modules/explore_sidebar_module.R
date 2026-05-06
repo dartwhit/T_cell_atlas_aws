@@ -14,9 +14,9 @@ explore_sidebar_UI <- function(id, choices) {
     conditionalPanel(
       condition="input.data_level == 'full'",
       ns = ns,
-      switchInput(ns("anno"),
-                  "Original seurat clusters",
-                  value = FALSE)
+      checkboxInput(ns("anno"),
+                    "Original seurat clusters",
+                    value = FALSE)
     ),
     
     uiOutput(ns("data_level_ui")),
