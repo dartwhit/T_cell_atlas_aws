@@ -455,7 +455,10 @@ server <- function(input, output, session) {
     #Clear gene/pathway input fields
     updateSelectizeInput(session, "explore_sidebar_module-gene_select", choices = NULL, selected = character(0))
     updateTextAreaInput(session, "explore_sidebar_module-gene_input", value = "")
+    shinyjs::reset("explore_sidebar_module-gene_file")
     applied_gene_list(NULL)
+    # Clear validation message
+    output[[sidebar_inputs$ns("gene_validation_msg")]] <- renderUI(NULL)
     
     
     updateSelectInput(session, "explore_sidebar_module-pathway_select", choices = NULL, selected = character(0))
