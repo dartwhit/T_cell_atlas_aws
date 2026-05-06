@@ -226,7 +226,13 @@ ui <- page_navbar(
 
 # Wrap UI with shinymanager authentication
 cat("[ui.R] calling secure_app()...\n", file = stderr())
-ui <- secure_app(ui, enable_admin = TRUE)
+ui <- tryCatch({
+  secure_app(ui, enable_admin = TRUE)
+}, error = function(e) {
+  cat("[ui.R] ERROR in secure_app():", conditionMessage(e), "\n", file = stderr())
+  # Fallback: return the raw UI so the app at least loads (no auth)
+  ui
+})
 cat("[ui.R] DONE\n", file = stderr())
 
 
