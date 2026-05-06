@@ -8,6 +8,7 @@
 #
 #test change
 
+cat("[ui.R] loading libraries...\n", file = stderr())
 library(shiny)
 library(shinymanager)
 library(shinyWidgets)
@@ -15,15 +16,20 @@ library(bslib)
 library(shinycssloaders)
 library(DT)
 library(bsicons)
+cat("[ui.R] loading Seurat...\n", file = stderr())
 library(Seurat)
+cat("[ui.R] loading periscope2...\n", file = stderr())
 library(periscope2)
+cat("[ui.R] loading shinyjs...\n", file = stderr())
 library(shinyjs)
+cat("[ui.R] sourcing setup.R...\n", file = stderr())
 source("setup.R")
-
+cat("[ui.R] sourcing modules...\n", file = stderr())
 ## Source UI modules
 source("modules/spatial_unit.R")
 source("modules/dataset_gallery_module.R")
 source("modules/explore_sidebar_module.R")
+cat("[ui.R] modules loaded, building UI...\n", file = stderr())
 
 
 # Feature plot of queried genes
@@ -219,6 +225,8 @@ ui <- page_navbar(
 )
 
 # Wrap UI with shinymanager authentication
+cat("[ui.R] calling secure_app()...\n", file = stderr())
 ui <- secure_app(ui, enable_admin = TRUE)
+cat("[ui.R] DONE\n", file = stderr())
 
 

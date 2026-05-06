@@ -1,6 +1,9 @@
 inDir <- "data/"
 DE_dir <- "DE_dfs/"
-cat("Working directory is:", getwd(), "\n", file = stderr())
+cat("[setup.R] START — working directory:", getwd(), "\n", file = stderr())
+
+# Null-coalescing operator (avoids rlang dependency in global scope)
+`%||%` <- function(x, y) if (!is.null(x)) x else y
 
 # Default comparison metadata for datasets without explicit configuration
 DEFAULT_COMPARISON_TYPE <- "disease"
@@ -67,3 +70,4 @@ scrna_dataset_choices <- setNames(
   dataset_meta$id[dataset_meta$has_scrna],
   dataset_meta$name[dataset_meta$has_scrna]
 )
+cat("[setup.R] DONE — loaded", nrow(dataset_meta), "datasets\n", file = stderr())

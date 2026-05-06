@@ -2,18 +2,23 @@ cat("✅ server.R initialized at", Sys.time(), "\n", file = stderr())
 
 library(shiny)
 library(shinymanager)
+cat("[server.R] loading Seurat...\n", file = stderr())
 library(Seurat)
+cat("[server.R] Seurat loaded\n", file = stderr())
 library(DT)
 library(ggplot2)
 library(dplyr)
 library(stringr)
+cat("[server.R] loading VAM...\n", file = stderr())
 library(VAM)
+cat("[server.R] VAM loaded\n", file = stderr())
 library(shinyjs)
 library(tidyr)
 source("setup.R")
 source("modules/dataset_gallery_module.R")
 source("modules/explore_sidebar_module.R")
 source("modules/spatial_unit.R")
+cat("[server.R] global sourcing complete\n", file = stderr())
 
 # Disable noisy tracing in all environments
 options(shiny.trace = FALSE, shiny.fullstacktrace = FALSE)
@@ -21,6 +26,7 @@ options(shiny.trace = FALSE, shiny.fullstacktrace = FALSE)
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
+  cat("[server] session started\n", file = stderr())
   db_path <- "/srv/shiny-server/data/users_current.sqlite"  # Fixed path to match docker mount
   cat("Shinymanager DB (app):", db_path, "\n")
   cat("DB exists:", file.exists(db_path), "\n")
@@ -45,9 +51,11 @@ server <- function(input, output, session) {
     })
   }
 
+  cat("[server] calling secure_server()...\n", file = stderr())
   res_auth <- secure_server(
        check_credentials = check_credentials(db = db_path)
      )
+  cat("[server] secure_server() done\n", file = stderr())
 
   output$welcome <- renderText(paste("Welcome,", res_auth$user))
 
