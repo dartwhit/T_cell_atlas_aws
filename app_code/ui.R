@@ -16,11 +16,7 @@ library(bslib)
 library(shinycssloaders)
 library(DT)
 library(bsicons)
-cat("[ui.R] loading Seurat...\n", file = stderr())
-library(Seurat)
-cat("[ui.R] loading periscope2...\n", file = stderr())
 library(periscope2)
-cat("[ui.R] loading shinyjs...\n", file = stderr())
 library(shinyjs)
 cat("[ui.R] sourcing setup.R...\n", file = stderr())
 source("setup.R")
@@ -225,6 +221,11 @@ ui <- page_navbar(
 )
 
 # Wrap UI with shinymanager authentication
+local({
+  gc_info <- gc(verbose = FALSE)
+  mem_mb  <- round(sum(gc_info[, 2]) * 8 / 1024, 1)  # Vcells * 8 bytes -> MB
+  cat("[ui.R] R heap before secure_app():", mem_mb, "MB used\n", file = stderr())
+})
 cat("[ui.R] calling secure_app()...\n", file = stderr())
 ui <- tryCatch({
   secure_app(ui, enable_admin = TRUE)
