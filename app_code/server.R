@@ -15,7 +15,8 @@ source("modules/dataset_gallery_module.R")
 source("modules/explore_sidebar_module.R")
 source("modules/spatial_unit.R")
 
-options(shiny.trace = TRUE)
+# Disable noisy tracing in all environments
+options(shiny.trace = FALSE, shiny.fullstacktrace = FALSE)
 
 
 # Define server logic required to draw a histogram
@@ -64,17 +65,19 @@ server <- function(input, output, session) {
   })
   
   # Get the path to the selected spatial data
+  # Only resolves when a study is explicitly chosen (prevents eager RDS load on startup)
   spatial_data_path <- reactive({
     req(input$spatial_study_selector)
-    paste0(inDir, dataset_files[[input$spatial_study_selector]][["spatial_seurat"]])
+    sid <- input$spatial_study_selector
+    spat_file <- dataset_files[[sid]][["spatial_seurat"]]
+    req(!is.null(spat_file))   # don't proceed if the dataset has no spatial file
+    paste0(inDir, spat_file)
   })
 
-    spatial_server(
+  spatial_server(
     id = "sp1",
     rds_path = spatial_data_path
   )
-
-  options(shiny.trace = FALSE, shiny.fullstacktrace = FALSE, shiny.sanitize.errors = TRUE)
 
   selected_study_from_gallery <- dataset_gallery_server("gallery_module")
 
