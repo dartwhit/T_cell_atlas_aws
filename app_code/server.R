@@ -740,9 +740,10 @@ server <- function(input, output, session) {
           }
           
           plot_data <- FetchData(curr_obj, vars = c(feature_names, "Disease"), assay = assay_to_use) %>%
-            pivot_longer(cols = -Disease, names_to = "feature", values_to = "expression")
-          
-          ggplot(plot_data, aes(x = Disease, y = expression, fill = Disease)) +
+            mutate(cell_type = as.character(Idents(curr_obj))) %>%
+            pivot_longer(cols = -c(Disease, cell_type), names_to = "feature", values_to = "expression")
+
+          ggplot(plot_data, aes(x = cell_type, y = expression, fill = Disease)) +
             geom_boxplot(outlier.shape = NA) +
             scale_fill_manual(values = c("HC" = "#cb07a4ff", "SSc" = "#09b646ff")) +
             facet_wrap(~feature, scales = "free_y") +
