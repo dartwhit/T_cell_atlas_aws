@@ -181,6 +181,8 @@ server <- function(input, output, session) {
   cell_clusters <- reactiveVal(NULL)
   pathway_list <- reactiveVal()
   meta_df <- reactiveVal()
+  # Holds the validated, parsed gene list after the user clicks "Apply Gene List"
+  applied_gene_list <- reactiveVal(NULL)
   
   # Dynamic UI for comparison checkbox with appropriate label
   output$by_condition_checkbox <- renderUI({
@@ -452,7 +454,8 @@ server <- function(input, output, session) {
     
     #Clear gene/pathway input fields
     updateSelectizeInput(session, "explore_sidebar_module-gene_select", choices = NULL, selected = character(0))
-    updateTextInput(session, "explore_sidebar_module-gene_input",value = "")
+    updateTextAreaInput(session, "explore_sidebar_module-gene_input", value = "")
+    applied_gene_list(NULL)
     
     
     updateSelectInput(session, "explore_sidebar_module-pathway_select", choices = NULL, selected = character(0))
@@ -505,24 +508,103 @@ server <- function(input, output, session) {
   )
 
   
+  # ---------- Helper: parse a raw gene string into a character vector ----------
+  # Accepts any mix of commas, semicolons, tabs, newlines, or spaces as delimiters.
+  # Trims surrounding whitespace and drops empty tokens.
+  parse_gene_string <- function(raw_text) {
+    genes <- unlist(strsplit(raw_text, "[,;\t\n ]+"))
+    genes <- trimws(genes)
+    genes[nzchar(genes)]
+  }
+
+  # ---------- Apply Gene List button: parse text area OR uploaded file ----------
+  observeEvent(sidebar_inputs$apply_gene_list(), {
+    req(isTRUE(sidebar_inputs$use_textinput()))
+
+    # Prefer uploaded file over pasted text
+    file_info <- sidebar_inputs$gene_file()
+    raw_text  <- if (!is.null(file_info) && file.exists(file_info$datapath)) {
+      paste(readLines(file_info$datapath, warn = FALSE), collapse = "\n")
+    } else {
+      sidebar_inputs$gene_input()
+    }
+
+    if (is.null(raw_text) || !nzchar(trimws(raw_text))) {
+      applied_gene_list(NULL)
+      return()
+    }
+
+    genes_entered <- parse_gene_string(raw_text)
+
+    # Validate against the loaded dataset's gene list
+    available_genes <- gene_list_obj()
+    if (!is.null(available_genes) && length(available_genes) > 0) {
+      found     <- genes_entered[genes_entered %in% available_genes]
+      not_found <- genes_entered[!genes_entered %in% available_genes]
+    } else {
+      # No dataset loaded yet — accept everything; validation deferred
+      found     <- genes_entered
+      not_found <- character(0)
+    }
+
+    applied_gene_list(if (length(found) > 0) found else NULL)
+
+    # Render validation feedback inside the sidebar module
+    output[[sidebar_inputs$ns("gene_validation_msg")]] <- renderUI({
+      n_found     <- length(found)
+      n_not_found <- length(not_found)
+      n_total     <- n_found + n_not_found
+
+      if (n_total == 0) return(NULL)
+
+      found_msg <- if (n_found > 0) {
+        tags$span(
+          style = "color: #2e7d32; font-weight: bold;",
+          icon("check-circle"),
+          paste0(n_found, " gene", if (n_found != 1) "s" else "", " found")
+        )
+      } else NULL
+
+      not_found_msg <- if (n_not_found > 0) {
+        tags$span(
+          style = "color: #c62828; font-weight: bold;",
+          icon("exclamation-triangle"),
+          paste0(n_not_found, " not recognized: "),
+          tags$span(
+            style = "font-weight: normal; font-style: italic; word-break: break-all;",
+            paste(not_found, collapse = ", ")
+          )
+        )
+      } else NULL
+
+      tagList(
+        tags$div(style = "margin-top: 6px; font-size: 0.85em; line-height: 1.6;",
+          found_msg,
+          if (!is.null(found_msg) && !is.null(not_found_msg)) tags$br(),
+          not_found_msg
+        )
+      )
+    })
+  })
+
   # ---------- Featureplot of the queried gene ----------
   gene_queried <- reactive({
-    
+
     # Check reset trigger
     if (reset_trigger()) {
       return(NULL)
     }
-    if (isTRUE(input$update_gene_queried)){
+    if (isTRUE(input$update_gene_queried)) {
       new_gene_queried()
     }
-    
+
     if (!isTRUE(sidebar_inputs$use_textinput()) && length(sidebar_inputs$gene_select()) > 0) {
       return(sidebar_inputs$gene_select())
-    } else if (isTRUE(sidebar_inputs$use_textinput()) && nchar(sidebar_inputs$gene_input()) > 0) {
-      # Splitting by comma, tab, space, or newline
-      genes <- unlist(strsplit(sidebar_inputs$gene_input(), "[,\n]+"))
-      genes <- genes[genes != ""]  # Remove any empty strings
-      return(genes)
+    } else if (isTRUE(sidebar_inputs$use_textinput())) {
+      # Use the validated list produced by the Apply button
+      genes <- applied_gene_list()
+      if (length(genes) > 0) return(genes)
+      return(NULL)
     } else {
       return(NULL)
     }
