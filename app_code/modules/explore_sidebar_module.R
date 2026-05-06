@@ -74,13 +74,19 @@ explore_sidebar_UI <- function(id, choices) {
             condition = "input.feature_type == 'Pathways'",
             ns = ns,
             checkboxInput(ns("use_textinput_VAM"), "Add my own gene set", value = FALSE),
-            selectInput(ns("pathway_select")," Select pathways", choices = NULL, multiple = TRUE),
+            selectizeInput(ns("pathway_select"), "Select pathways", choices = NULL, multiple = TRUE,
+                           options = list(placeholder = "Search or select pathways...",
+                                          maxItems = 10)),
             conditionalPanel(
               condition = "input.use_textinput_VAM ==1",
               ns = ns,
-              textInput(ns("geneset_name"),"Name of your gene set"),
-              textAreaInput(ns("VAM_geneset"), "Please paste a list of genes for VAM"),
-              actionBttn(ns("submit_geneset"),"Add geneset")
+              textInput(ns("geneset_name"), "Name your gene set",
+                        placeholder = "e.g. MY_CUSTOM_PATHWAY"),
+              textAreaInput(ns("VAM_geneset"), "Paste gene list for VAM scoring",
+                            placeholder = "One gene per line, or comma/semicolon-separated.\nGenes not found in the dataset will be excluded automatically.",
+                            rows = 6),
+              actionBttn(ns("submit_geneset"), "Add gene set",
+                         style = "simple", color = "success", size = "sm")
             )
           )
           
@@ -129,7 +135,7 @@ explore_sidebar_server <- function(id, selected_study_from_gallery) {
         geneset_name      = reactive(input$geneset_name),
         VAM_geneset       = reactive(input$VAM_geneset),
         submit_geneset    = reactive(input$submit_geneset),
-        # expose ns so server.R can render gene_validation_msg
+        # expose ns so server.R can render inside-module outputs
         ns                = ns
       )
     )

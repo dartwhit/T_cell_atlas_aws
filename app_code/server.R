@@ -372,23 +372,22 @@ server <- function(input, output, session) {
 
     
     # Try loading VAM df
-    # VAM_file <- dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["VAM_df"]]
-    # VAM_path <- paste0(inDir,DE_dir,VAM_file)
-    # print(VAM_path)
+    vam_file_name <- dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["VAM_df"]]
+    vam_file_path <- if (!is.null(vam_file_name)) paste0(inDir, DE_dir, vam_file_name) else NULL
     
     VAM_data <- tryCatch(
       {
-        if (!is.null(VAM_file)) {
-          read.delim(VAM_path)
+        if (!is.null(vam_file_path) && file.exists(vam_file_path)) {
+          read.delim(vam_file_path)
         } else {
           NULL
         }
       },
       error = function(e) {
+        cat("Error reading VAM file:", conditionMessage(e), "\n")
         NULL
       }
     )
-    # print(VAM_data)
     VAM_df(VAM_data)
     
     
@@ -396,7 +395,7 @@ server <- function(input, output, session) {
     # cell_clusters(levels(as.factor(data$cluster)))
     
     updateSelectizeInput(session, "explore_sidebar_module-gene_select", choices = gene_list_obj(), server = TRUE)
-    updateSelectInput(session,"explore_sidebar_module-pathway_select", choices = pathway_list())
+    updateSelectizeInput(session, "explore_sidebar_module-pathway_select", choices = pathway_list(), server = TRUE)
     
     
     print(paste("Loaded",sidebar_inputs$data_level(),"from dataset:", sidebar_inputs$study()))  
@@ -461,7 +460,7 @@ server <- function(input, output, session) {
     output[[sidebar_inputs$ns("gene_validation_msg")]] <- renderUI(NULL)
     
     
-    updateSelectInput(session, "explore_sidebar_module-pathway_select", choices = NULL, selected = character(0))
+    updateSelectizeInput(session, "explore_sidebar_module-pathway_select", choices = NULL, selected = character(0), server = TRUE)
     
     
     updateSelectInput(session, "cell_cluster", choices = NULL, selected = character(0))
@@ -631,40 +630,131 @@ server <- function(input, output, session) {
   })
   
   ### Append user-defined pathway
-  observeEvent(sidebar_inputs$submit_geneset(),{
+  observeEvent(sidebar_inputs$submit_geneset(), {
     curr_obj <- seurat_obj()
-    if (sidebar_inputs$geneset_name() != "" && nchar(sidebar_inputs$VAM_geneset()>0)){
-      new_geneset_name <- sidebar_inputs$geneset_name()
-      # Parse gene list
-      new_geneset <- unlist(strsplit(sidebar_inputs$VAM_geneset(), "[,\n]+"))
-      new_geneset <- new_geneset[new_geneset != ""]  # Remove any empty strings
-      print(new_geneset)  # Debug print to console
-      
-      # Create collection for VAM
+    
+    geneset_name_val <- trimws(sidebar_inputs$geneset_name())
+    geneset_raw      <- sidebar_inputs$VAM_geneset()
+    
+    # --- input validation ---
+    if (geneset_name_val == "") {
+      showNotification("Please enter a name for your gene set.", type = "warning", duration = 5)
+      return()
+    }
+    if (is.null(geneset_raw) || nchar(trimws(geneset_raw)) == 0) {
+      showNotification("Please paste a gene list before submitting.", type = "warning", duration = 5)
+      return()
+    }
+    if (is.null(curr_obj)) {
+      showNotification("Please load a dataset first.", type = "error", duration = 5)
+      return()
+    }
+    if (geneset_name_val %in% rownames(curr_obj@assays$VAMcdf)) {
+      showNotification(paste0('A pathway named "', geneset_name_val, '" already exists. Choose a different name.'),
+                       type = "warning", duration = 6)
+      return()
+    }
+    
+    # Parse gene list (commas, semicolons, newlines, tabs, spaces)
+    new_geneset <- unlist(strsplit(geneset_raw, "[,;\t\n ]+"))
+    new_geneset <- trimws(new_geneset)
+    new_geneset <- new_geneset[nzchar(new_geneset)]
+    
+    # Validate genes against the loaded dataset
+    all_genes <- tryCatch(
+      rownames(GetAssayData(curr_obj, assay = "RNA", layer = "counts")),
+      error = function(e) rownames(curr_obj@assays$RNA)  # Seurat v4 fallback
+    )
+    
+    genes_found     <- new_geneset[new_geneset %in% all_genes]
+    genes_not_found <- new_geneset[!new_geneset %in% all_genes]
+    
+    if (length(genes_found) == 0) {
+      showNotification(
+        paste0("None of the entered genes were found in the dataset. ",
+               "Check gene names (case-sensitive).\nNot found: ",
+               paste(head(new_geneset, 10), collapse = ", ")),
+        type = "error", duration = 10
+      )
+      return()
+    }
+    if (length(genes_not_found) > 0) {
+      showNotification(
+        paste0(length(genes_not_found), " gene(s) not found and will be excluded: ",
+               paste(genes_not_found, collapse = ", ")),
+        type = "warning", duration = 8
+      )
+    }
+    
+    # Show progress while running VAM (can take a while)
+    progress <- shiny::Progress$new(session, min = 0, max = 1)
+    progress$set(message = paste0('Computing VAM scores for "', geneset_name_val, '"...'), value = 0.2)
+    on.exit(progress$close())
+    
+    tryCatch({
+      # Build gene set collection with only validated genes
       new_collection <- list()
-      new_collection[[new_geneset_name]] <- new_geneset
+      new_collection[[geneset_name_val]] <- genes_found
+      new_collection <- createGeneSetCollection(
+        gene.ids = all_genes,
+        gene.set.collection = new_collection
+      )
       
-      all_genes<-rownames(curr_obj@assays$RNA@counts)
-      new_collection <- createGeneSetCollection(gene.ids=all_genes, gene.set.collection = new_collection)
+      # Get count matrix (Seurat v4 and v5 compatible)
+      rna_counts <- tryCatch(
+        GetAssayData(curr_obj, assay = "RNA", layer = "counts"),
+        error = function(e) curr_obj[["RNA"]]@counts
+      )
       
-      vam_res <- vamForCollection(t(curr_obj[["RNA"]]@counts), new_collection)
+      progress$set(value = 0.5, message = "Running VAM...")
+      vam_res <- vamForCollection(t(rna_counts), new_collection)
       
-      # Add VAM scores of new pathway to object
-      new_VAM_dist <- CreateAssayObject(rbind(curr_obj[["VAMdist"]]@counts, t(vam_res$distance.sq)))
-      new_VAM_score <- CreateAssayObject(rbind(curr_obj[["VAMcdf"]]@counts, t(vam_res$cdf.value)))
-      curr_obj[["VAMdist"]] <- new_VAM_dist
-      curr_obj[["VAMcdf"]] <-new_VAM_score
+      progress$set(value = 0.9, message = "Updating object...")
       
-      # Update seurat object
+      # Add VAM scores to object (Seurat v4/v5 compatible)
+      existing_dist  <- tryCatch(
+        GetAssayData(curr_obj, assay = "VAMdist", layer = "counts"),
+        error = function(e) curr_obj[["VAMdist"]]@counts
+      )
+      existing_score <- tryCatch(
+        GetAssayData(curr_obj, assay = "VAMcdf", layer = "counts"),
+        error = function(e) curr_obj[["VAMcdf"]]@counts
+      )
+      
+      curr_obj[["VAMdist"]] <- CreateAssayObject(
+        rbind(existing_dist,  t(vam_res$distance.sq))
+      )
+      curr_obj[["VAMcdf"]] <- CreateAssayObject(
+        rbind(existing_score, t(vam_res$cdf.value))
+      )
+      
+      # Update seurat object and pathway selector
       seurat_obj(curr_obj)
       
       vam_names <- rownames(curr_obj@assays$VAMcdf)
-      pathway_names_for_display <- str_remove(vam_names,"HALLMARK-")
+      pathway_names_for_display <- str_remove(vam_names, "HALLMARK-")
       pathway_choices <- setNames(vam_names, pathway_names_for_display)
       pathway_list(pathway_choices)
       
-      updateSelectInput(session,"explore_sidebar_module-pathway_select", choices = pathway_list(), selected = new_geneset_name)
-    }
+      updateSelectizeInput(
+        session,
+        "explore_sidebar_module-pathway_select",
+        choices  = pathway_list(),
+        selected = geneset_name_val
+      )
+      
+      showNotification(
+        paste0('Gene set "', geneset_name_val, '" added successfully (',
+               length(genes_found), ' genes).'),
+        type = "message", duration = 5
+      )
+    }, error = function(e) {
+      cat("Error computing custom VAM pathway:", conditionMessage(e), "\n")
+      showNotification(
+        paste0("VAM computation failed: ", conditionMessage(e)),
+        type = "error", duration = 10
+      )
+    })
   })
   
   output$show_switch <- reactive({
@@ -977,7 +1067,7 @@ server <- function(input, output, session) {
     # Create branches based on feature type
     feature_type_selected <- sidebar_inputs$feature_type()
     print(feature_type_selected)
-    updateAwesomeRadio(session,"feature_type", selected = feature_type_selected)
+    updateAwesomeRadio(session, "explore_sidebar_module-feature_type", selected = feature_type_selected)
     
     
     input_id <- if (feature_type_selected == "Genes") "explore_sidebar_module-gene_select" else "explore_sidebar_module-pathway_select"
