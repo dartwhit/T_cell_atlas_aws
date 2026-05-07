@@ -884,14 +884,30 @@ server <- function(input, output, session) {
       stop(paste("Features queried not found in seurat_obj:", paste(missing_features, collapse = ", ")))
     }
 
+    # Helper: ggplot tile heatmap (mean per cluster, z-scored per feature).
+    # Used instead of DoHeatmap because DoHeatmap's slot/layer API changed in
+    # Seurat v5 and silently returns empty plots for custom assays.
+    make_tile_heatmap <- function(obj, features, assay) {
+      FetchData(obj, vars = features, assay = assay) %>%
+        mutate(cluster = as.character(Idents(obj))) %>%
+        group_by(cluster) %>%
+        summarise(across(everything(), mean), .groups = "drop") %>%
+        pivot_longer(-cluster, names_to = "feature", values_to = "value") %>%
+        group_by(feature) %>%
+        mutate(scaled = as.numeric(scale(value))) %>%
+        ungroup() %>%
+        ggplot(aes(x = cluster, y = feature, fill = scaled)) +
+        geom_tile(color = "white", linewidth = 0.3) +
+        scale_fill_gradient2(low = "blue", mid = "white", high = "red",
+                             midpoint = 0, name = "Scaled\nmean") +
+        theme_classic() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+        labs(x = NULL, y = NULL)
+    }
+
     # Determine the type of plot to render
     if (f_type == "Pathways" && length(feature_names) > 3 && isTRUE(input$heatmap)) {
-      # Show heatmap for >3 pathways — ScaleData needed since DoHeatmap reads scale.data
-      curr_obj <- ScaleData(curr_obj, assay = "VAMcdf", features = feature_names)
-      DoHeatmap(curr_obj,
-                features = feature_names,
-                assay = "VAMcdf",
-                slot = "scale.data")
+      make_tile_heatmap(curr_obj, feature_names, "VAMcdf")
     } else if (f_type == "Pathways" && length(feature_names) > 3) {
       # Default: dot plot for >3 pathways
       DotPlot(curr_obj,
@@ -900,13 +916,8 @@ server <- function(input, output, session) {
               cols = c("blue", "red"),
               split.by = "Disease")
     } else if (f_type == "Genes" && length(feature_names) > 3 && isTRUE(input$heatmap)) {
-      # Show heatmap for >3 genes if heatmap option is selected
       assay_to_use <- if ("SCT" %in% Assays(curr_obj)) "SCT" else "RNA"
-      curr_obj <- ScaleData(curr_obj, assay = assay_to_use, features = feature_names)
-      DoHeatmap(curr_obj,
-                features = feature_names,
-                assay = assay_to_use,
-                slot = "scale.data")
+      make_tile_heatmap(curr_obj, feature_names, assay_to_use)
     } else {
       # Show default dot plot or violin plot
       if (length(feature_names) <= 3) {
