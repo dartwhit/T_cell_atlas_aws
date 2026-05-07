@@ -751,9 +751,18 @@ server <- function(input, output, session) {
   })
   
   output$show_switch <- reactive({
-     (sidebar_inputs$feature_type() == "Genes") && (length(gene_queried()) > 3)
+    f_type <- sidebar_inputs$feature_type()
+    (f_type == "Genes" && length(gene_queried()) > 3) ||
+    (f_type == "Pathways" && length(pathway_queried()) > 3)
   })
   outputOptions(output, "show_switch", suspendWhenHidden= FALSE)
+
+  output$show_plot_type <- reactive({
+    f_type <- sidebar_inputs$feature_type()
+    !(f_type == "Genes" && length(gene_queried()) > 3) &&
+    !(f_type == "Pathways" && length(pathway_queried()) > 3)
+  })
+  outputOptions(output, "show_plot_type", suspendWhenHidden= FALSE)
   
 
   
@@ -864,25 +873,40 @@ server <- function(input, output, session) {
     # Ensure required inputs are present
     req(curr_obj, feature_names)
     
+    # Set assay before feature validation so rownames() reflects the right assay
+    if (f_type == "Pathways") {
+      DefaultAssay(curr_obj) <- "VAMcdf"
+    }
+
     # Check if all features exist in the Seurat object
     if (!all(feature_names %in% rownames(curr_obj))) {
       missing_features <- feature_names[!feature_names %in% rownames(curr_obj)]
       stop(paste("Features queried not found in seurat_obj:", paste(missing_features, collapse = ", ")))
     }
-    
+
     # Determine the type of plot to render
-    if (f_type == "Pathways" && length(feature_names) > 3) {
-      # Show heatmap for >3 pathways
-      DoHeatmap(curr_obj, 
-                features = feature_names, 
-                assay = "VAMcdf", 
-                slot = "data")
-    } else if (f_type == "Genes" && length(feature_names) > 3 && input$heatmap) {
+    if (f_type == "Pathways" && length(feature_names) > 3 && isTRUE(input$heatmap)) {
+      # Show heatmap for >3 pathways — ScaleData needed since DoHeatmap reads scale.data
+      curr_obj <- ScaleData(curr_obj, assay = "VAMcdf", features = feature_names)
+      DoHeatmap(curr_obj,
+                features = feature_names,
+                assay = "VAMcdf",
+                slot = "scale.data")
+    } else if (f_type == "Pathways" && length(feature_names) > 3) {
+      # Default: dot plot for >3 pathways
+      DotPlot(curr_obj,
+              features = feature_names,
+              assay = "VAMcdf",
+              cols = c("blue", "red"),
+              split.by = "Disease")
+    } else if (f_type == "Genes" && length(feature_names) > 3 && isTRUE(input$heatmap)) {
       # Show heatmap for >3 genes if heatmap option is selected
-      DoHeatmap(curr_obj, 
-                features = feature_names, 
-                assay = "RNA", 
-                slot = "data")
+      assay_to_use <- if ("SCT" %in% Assays(curr_obj)) "SCT" else "RNA"
+      curr_obj <- ScaleData(curr_obj, assay = assay_to_use, features = feature_names)
+      DoHeatmap(curr_obj,
+                features = feature_names,
+                assay = assay_to_use,
+                slot = "scale.data")
     } else {
       # Show default dot plot or violin plot
       if (length(feature_names) <= 3) {
