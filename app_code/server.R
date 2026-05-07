@@ -380,6 +380,16 @@ server <- function(input, output, session) {
         if (!is.null(vam_file_path) && file.exists(vam_file_path)) {
           read.delim(vam_file_path)
         } else {
+          if (!is.null(vam_file_path)) {
+            # Path was configured but file is missing — surface this as a warning
+            cat("VAM DE file not found:", vam_file_path, "\n")
+            showNotification(
+              paste0("Pathway DE file not found: ", basename(vam_file_path),
+                     ". Pathway DEG table will be unavailable."),
+              type = "warning", duration = 8
+            )
+          }
+          # NULL when unconfigured (normal) or when file is missing (warned above)
           NULL
         }
       },
