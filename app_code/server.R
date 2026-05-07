@@ -751,10 +751,12 @@ server <- function(input, output, session) {
   })
   
   output$show_switch <- reactive({
-     (sidebar_inputs$feature_type() == "Genes") && (length(gene_queried()) > 3)
+    f_type <- sidebar_inputs$feature_type()
+    (f_type == "Genes" && length(gene_queried()) > 3) ||
+    (f_type == "Pathways" && length(pathway_queried()) > 3)
   })
   outputOptions(output, "show_switch", suspendWhenHidden= FALSE)
-  
+
 
   
   featureplot_plot_gene <- reactive({
@@ -864,25 +866,51 @@ server <- function(input, output, session) {
     # Ensure required inputs are present
     req(curr_obj, feature_names)
     
+    # Set assay before feature validation so rownames() reflects the right assay
+    if (f_type == "Pathways") {
+      DefaultAssay(curr_obj) <- "VAMcdf"
+    }
+
     # Check if all features exist in the Seurat object
     if (!all(feature_names %in% rownames(curr_obj))) {
       missing_features <- feature_names[!feature_names %in% rownames(curr_obj)]
       stop(paste("Features queried not found in seurat_obj:", paste(missing_features, collapse = ", ")))
     }
-    
+
+    # Helper: ggplot tile heatmap (mean per cluster, z-scored per feature).
+    # Used instead of DoHeatmap because DoHeatmap's slot/layer API changed in
+    # Seurat v5 and silently returns empty plots for custom assays.
+    make_tile_heatmap <- function(obj, features, assay) {
+      FetchData(obj, vars = features, assay = assay) %>%
+        mutate(cluster = as.character(Idents(obj))) %>%
+        group_by(cluster) %>%
+        summarise(across(everything(), mean), .groups = "drop") %>%
+        pivot_longer(-cluster, names_to = "feature", values_to = "value") %>%
+        group_by(feature) %>%
+        mutate(scaled = as.numeric(scale(value))) %>%
+        ungroup() %>%
+        ggplot(aes(x = cluster, y = feature, fill = scaled)) +
+        geom_tile(color = "white", linewidth = 0.3) +
+        scale_fill_gradient2(low = "blue", mid = "white", high = "red",
+                             midpoint = 0, name = "Scaled\nmean") +
+        theme_classic() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+        labs(x = NULL, y = NULL)
+    }
+
     # Determine the type of plot to render
-    if (f_type == "Pathways" && length(feature_names) > 3) {
-      # Show heatmap for >3 pathways
-      DoHeatmap(curr_obj, 
-                features = feature_names, 
-                assay = "VAMcdf", 
-                slot = "data")
-    } else if (f_type == "Genes" && length(feature_names) > 3 && input$heatmap) {
-      # Show heatmap for >3 genes if heatmap option is selected
-      DoHeatmap(curr_obj, 
-                features = feature_names, 
-                assay = "RNA", 
-                slot = "data")
+    if (f_type == "Pathways" && length(feature_names) > 3 && isTRUE(input$heatmap)) {
+      make_tile_heatmap(curr_obj, feature_names, "VAMcdf")
+    } else if (f_type == "Pathways" && length(feature_names) > 3) {
+      # Default: dot plot for >3 pathways
+      DotPlot(curr_obj,
+              features = feature_names,
+              assay = "VAMcdf",
+              cols = c("blue", "red"),
+              split.by = "Disease")
+    } else if (f_type == "Genes" && length(feature_names) > 3 && isTRUE(input$heatmap)) {
+      assay_to_use <- if ("SCT" %in% Assays(curr_obj)) "SCT" else "RNA"
+      make_tile_heatmap(curr_obj, feature_names, assay_to_use)
     } else {
       # Show default dot plot or violin plot
       if (length(feature_names) <= 3) {
