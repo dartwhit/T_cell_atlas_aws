@@ -50,9 +50,11 @@ card_umap <- card("UMAP of the dataset",
 # Expression of queried genes
 card_gene_plot <-card("Plot of selected genes",
                             conditionalPanel("output.show_switch == true",
-                                             switchInput("heatmap","Show heatmap")
+                                             checkboxInput("heatmap", "Show heatmap", value = FALSE)
                                              ),
-                            switchInput("plot_type", "Plot Type", value = TRUE, onLabel = "Vln", offLabel = "Box"),
+                            radioButtons("plot_type", NULL,
+                                         choices = c("Violin" = "vln", "Box" = "box"),
+                                         selected = "vln", inline = TRUE),
                             
                             withSpinner(
                               

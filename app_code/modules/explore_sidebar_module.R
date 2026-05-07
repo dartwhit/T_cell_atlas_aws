@@ -14,9 +14,9 @@ explore_sidebar_UI <- function(id, choices) {
     conditionalPanel(
       condition="input.data_level == 'full'",
       ns = ns,
-      switchInput(ns("anno"),
-                  "Original seurat clusters",
-                  value = FALSE)
+      checkboxInput(ns("anno"),
+                    "Original seurat clusters",
+                    value = FALSE)
     ),
     
     uiOutput(ns("data_level_ui")),
@@ -73,14 +73,18 @@ explore_sidebar_UI <- function(id, choices) {
           conditionalPanel(
             condition = "input.feature_type == 'Pathways'",
             ns = ns,
+            selectInput(ns("pathway_select"), "Select pathways", choices = NULL, multiple = TRUE),
             checkboxInput(ns("use_textinput_VAM"), "Add my own gene set", value = FALSE),
-            selectInput(ns("pathway_select")," Select pathways", choices = NULL, multiple = TRUE),
             conditionalPanel(
-              condition = "input.use_textinput_VAM ==1",
+              condition = "input.use_textinput_VAM == 1",
               ns = ns,
-              textInput(ns("geneset_name"),"Name of your gene set"),
-              textAreaInput(ns("VAM_geneset"), "Please paste a list of genes for VAM"),
-              actionBttn(ns("submit_geneset"),"Add geneset")
+              textInput(ns("geneset_name"), "Name of your gene set",
+                        placeholder = "e.g. My Custom Pathway"),
+              textAreaInput(ns("VAM_geneset"), "Paste gene list:",
+                            placeholder = "One gene per line, or separated by commas, tabs, semicolons, or spaces"),
+              actionBttn(ns("submit_geneset"), "Add geneset",
+                         style = "simple", color = "primary", size = "sm"),
+              uiOutput(ns("pathway_validation_msg"))
             )
           )
           
