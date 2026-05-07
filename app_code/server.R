@@ -384,7 +384,11 @@ server <- function(input, output, session) {
         }
       },
       error = function(e) {
-        cat("Error reading VAM file:", conditionMessage(e), "\n")
+        cat("Error reading VAM file:", vam_file_path, "-", conditionMessage(e), "\n")
+        showNotification(
+          paste0("Could not load pathway DE table (", basename(vam_file_path %||% "unknown"), "): ", conditionMessage(e)),
+          type = "error", duration = NULL
+        )
         NULL
       }
     )
