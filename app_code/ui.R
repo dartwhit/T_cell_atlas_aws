@@ -52,7 +52,7 @@ card_gene_plot <-card("Plot of selected genes",
                             conditionalPanel("output.show_switch == true",
                                              checkboxInput("heatmap", "Show heatmap", value = FALSE)
                                              ),
-                            conditionalPanel("output.show_plot_type == true",
+                            conditionalPanel("output.show_switch == false",
                                              radioButtons("plot_type", NULL,
                                                           choices = c("Violin" = "vln", "Box" = "box"),
                                                           selected = "vln", inline = TRUE)

@@ -757,13 +757,6 @@ server <- function(input, output, session) {
   })
   outputOptions(output, "show_switch", suspendWhenHidden= FALSE)
 
-  output$show_plot_type <- reactive({
-    f_type <- sidebar_inputs$feature_type()
-    !(f_type == "Genes" && length(gene_queried()) > 3) &&
-    !(f_type == "Pathways" && length(pathway_queried()) > 3)
-  })
-  outputOptions(output, "show_plot_type", suspendWhenHidden= FALSE)
-  
 
   
   featureplot_plot_gene <- reactive({
