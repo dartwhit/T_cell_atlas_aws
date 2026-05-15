@@ -199,8 +199,8 @@ ui <- page_navbar(
                     choices = c("Seurat cluster" = "cluster",
                     "Key regions" =  "Key_Regions"),
                   selected = "cluster"),
-        selectizeInput(NS("sp1", "feature"), "Feature (Gene/pathway)",multiple = TRUE,
-        choices = NULL, options = list(placeholder = "Type to search…")),
+        selectizeInput(NS("sp1", "feature"), "Feature (Gene/pathway)", multiple = TRUE,
+        choices = NULL, options = list(placeholder = "Type to search…", maxItems = 6)),
         checkboxGroupInput(NS("sp1", "samples"),
                       "Select samples to view"
                     )
