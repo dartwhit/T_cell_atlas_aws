@@ -183,7 +183,20 @@ server <- function(input, output, session) {
   meta_df <- reactiveVal()
   # Holds the validated, parsed gene list after the user clicks "Apply Gene List"
   applied_gene_list <- reactiveVal(NULL)
-  
+
+  group_col <- reactive({
+    dataset_comparison_column[[sidebar_inputs$study()]]
+  })
+
+  group_colors <- reactive({
+    col <- group_col()
+    obj <- seurat_obj()
+    req(obj)
+    lvls <- levels(as.factor(obj@meta.data[[col]]))
+    default_palette <- c("#cb07a4ff", "#09b646ff", "#2196F3", "#FF9800")
+    setNames(default_palette[seq_along(lvls)], lvls)
+  })
+
   # Dynamic UI for comparison checkbox with appropriate label
   output$by_condition_checkbox <- renderUI({
     req(sidebar_inputs$study())
@@ -921,37 +934,37 @@ server <- function(input, output, session) {
           } else {
             "VAMcdf"
           }
-          VlnPlot(curr_obj, 
-                  features = feature_names, 
+          VlnPlot(curr_obj,
+                  features = feature_names,
                   assay = assay_to_use,
-                  split.by = "Disease", 
+                  split.by = group_col(),
                   split.plot = FALSE,
                   pt.size = 0,
-                  cols = c("HC" = "#cb07a4ff", "SSc" = "#09b646ff"))
+                  cols = group_colors())
         } else { # BoxPlot
           assay_to_use <- if (f_type == "Genes") {
             if ("SCT" %in% Assays(curr_obj)) "SCT" else "RNA"
           } else {
             "VAMcdf"
           }
-          
-          plot_data <- FetchData(curr_obj, vars = c(feature_names, "Disease"), assay = assay_to_use) %>%
+          grp <- group_col()
+          plot_data <- FetchData(curr_obj, vars = c(feature_names, grp), assay = assay_to_use) %>%
             mutate(cell_type = as.character(Idents(curr_obj))) %>%
-            pivot_longer(cols = -c(Disease, cell_type), names_to = "feature", values_to = "expression")
+            pivot_longer(cols = -c(all_of(grp), cell_type), names_to = "feature", values_to = "expression")
 
-          ggplot(plot_data, aes(x = cell_type, y = expression, fill = Disease)) +
+          ggplot(plot_data, aes(x = cell_type, y = expression, fill = .data[[grp]])) +
             geom_boxplot(outlier.shape = NA) +
-            scale_fill_manual(values = c("HC" = "#cb07a4ff", "SSc" = "#09b646ff")) +
+            scale_fill_manual(values = group_colors()) +
             facet_wrap(~feature, scales = "free_y") +
             theme_classic() +
             theme(axis.text.x = element_text(angle = 45, hjust = 1))
         }
       } else {
         # Show a dot plot for > 3 features by default
-        DotPlot(curr_obj, 
-                features = feature_names, 
-                cols = c("blue", "red"), 
-                split.by = "Disease")
+        DotPlot(curr_obj,
+                features = feature_names,
+                cols = c("blue", "red"),
+                split.by = group_col())
       }
     }
   })
@@ -962,18 +975,9 @@ server <- function(input, output, session) {
     "Please choose a gene."
   })
   
-  output$geneExpPlot_Khanna_msg <- renderText({
-    "Not applicable"
-  })
-
   output$exp_plot_UI <- renderUI({
     if (!is.null(gene_queried()) || !is.null(pathway_queried())) {
-      if(sidebar_inputs$study() == "khanna"){
-        textOutput("geneExpPlot_Khanna_msg")
-      }else{
-        plotOutput("geneExpPlot")
-      }
-      
+      plotOutput("geneExpPlot")
     } else {
       textOutput("geneExpPlot_msg")
     }

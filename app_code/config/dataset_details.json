@@ -156,6 +156,7 @@
   },
   "khanna": {
     "comparison_type": "timepoint",
+    "comparison_column": "time_point",
     "comparison_label": "After vs Before Treatment",
     "data_levels": {
       "Full": "full",
