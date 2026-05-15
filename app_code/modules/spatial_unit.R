@@ -1,8 +1,6 @@
 library(shiny)
 library(bslib)
 library(Seurat)
-library(ggplot2)
-library(tidyr)
 
 # ---------- MODULE UI ----------
 spatial_UI <- function(id) {
