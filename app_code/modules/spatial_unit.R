@@ -1,6 +1,8 @@
 library(shiny)
 library(bslib)
 library(Seurat)
+library(ggplot2)
+library(tidyr)
 
 # ---------- MODULE UI ----------
 spatial_UI <- function(id) {
@@ -21,6 +23,28 @@ spatial_UI <- function(id) {
     conditionalPanel(
       condition = paste0("input['", ns("samples"), "'] && input['", ns("samples"), "'].length > 0"),
       uiOutput(ns("sample_centric_grid"))
+    ),
+    # Expression by cluster/region
+    conditionalPanel(
+      condition = paste0("input['", ns("feature"), "'] && input['", ns("feature"), "'].length > 0"),
+      card(
+        card_header(
+          div(
+            class = "d-flex align-items-center justify-content-between w-100",
+            span("Expression by cluster / region"),
+            div(
+              class = "d-flex align-items-center gap-2",
+              radioButtons(
+                ns("expr_plot_type"), label = NULL,
+                choices = c("Violin" = "violin", "Box" = "box"),
+                selected = "violin", inline = TRUE
+              ),
+              downloadButton(ns("dld_expr"), "Download", class = "btn-sm")
+            )
+          )
+        ),
+        plotOutput(ns("expr_by_cluster"), height = 420)
+      )
     )
   )
 }
@@ -127,6 +151,76 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
       do.call(layout_columns, c(list(col_widths = rep(6, length(cards))), cards))
     })
     
+    # ---- Expression by cluster/region plot ----
+    group_by_col <- reactive({
+      switch(input$group_by,
+        "cluster"     = "seurat_clusters",
+        "Key_Regions" = "Key_Regions",
+        input$group_by
+      )
+    })
+
+    expr_plot_data <- reactive({
+      req(obj(), length(input$feature) > 0)
+      genes <- input$feature
+      grp   <- group_by_col()
+      # Validate the grouping column exists
+      req(grp %in% colnames(obj()@meta.data))
+      df <- FetchData(obj(), vars = c(grp, genes))
+      colnames(df)[1] <- "group"
+      df$group <- factor(df$group)
+      if (length(genes) == 1) {
+        df$gene <- genes
+        colnames(df)[2] <- "expression"
+      } else {
+        df <- tidyr::pivot_longer(df, cols = -group, names_to = "gene", values_to = "expression")
+      }
+      df
+    })
+
+    expr_plot_reactive <- reactive({
+      req(expr_plot_data())
+      df   <- expr_plot_data()
+      grp_label <- switch(input$group_by,
+        "cluster"     = "Seurat cluster",
+        "Key_Regions" = "Key region",
+        input$group_by
+      )
+      p <- ggplot2::ggplot(df, ggplot2::aes(x = group, y = expression, fill = group))
+      if (isTRUE(input$expr_plot_type == "box")) {
+        p <- p + ggplot2::geom_boxplot(outlier.size = 0.4, outlier.alpha = 0.4)
+      } else {
+        p <- p +
+          ggplot2::geom_violin(scale = "width", trim = TRUE) +
+          ggplot2::geom_jitter(width = 0.15, size = 0.3, alpha = 0.25, show.legend = FALSE)
+      }
+      p <- p +
+        ggplot2::facet_wrap(~gene, scales = "free_y") +
+        ggplot2::labs(x = grp_label, y = "Normalized expression", fill = grp_label) +
+        ggplot2::theme_bw(base_size = 12) +
+        ggplot2::theme(
+          axis.text.x  = ggplot2::element_text(angle = 45, hjust = 1),
+          legend.position = "none",
+          strip.background = ggplot2::element_rect(fill = "#f0f0f0")
+        )
+      p
+    })
+
+    output$expr_by_cluster <- renderPlot({ expr_plot_reactive() })
+
+    output$dld_expr <- downloadHandler(
+      filename = function() {
+        genes <- paste(input$feature, collapse = "-")
+        paste0("expr_by_", input$group_by, "_", genes, ".png")
+      },
+      content = function(file) {
+        n_genes <- length(input$feature)
+        w <- max(7, 3.5 * ceiling(sqrt(n_genes)))
+        h <- max(5, 3   * ceiling(n_genes / ceiling(sqrt(n_genes))))
+        ggplot2::ggsave(file, expr_plot_reactive(), width = w, height = h, dpi = 150)
+      }
+    )
+
     observe({
       req(length(input$samples) > 0, default_pt_sizes())
       
