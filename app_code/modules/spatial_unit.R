@@ -153,19 +153,24 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
     
     # ---- Expression by cluster/region plot ----
     group_by_col <- reactive({
-      switch(input$group_by,
-        "cluster"     = "seurat_clusters",
-        "Key_Regions" = "Key_Regions",
-        input$group_by
-      )
+      # Use the raw input$group_by value directly — it matches the metadata column
+      # name (the same value passed to SpatialDimPlot/DimPlot group.by).
+      # Fall back to the first metadata column if it somehow doesn't exist.
+      grp <- input$group_by
+      meta_cols <- colnames(obj()@meta.data)
+      if (!grp %in% meta_cols) {
+        # Try common alternatives
+        alts <- c("seurat_clusters", "ident", "orig.ident")
+        grp <- alts[alts %in% meta_cols][1]
+      }
+      grp
     })
 
     expr_plot_data <- reactive({
       req(obj(), length(input$feature) > 0)
       genes <- input$feature
       grp   <- group_by_col()
-      # Validate the grouping column exists
-      req(grp %in% colnames(obj()@meta.data))
+      req(!is.na(grp), grp %in% colnames(obj()@meta.data))
       df <- FetchData(obj(), vars = c(grp, genes))
       colnames(df)[1] <- "group"
       df$group <- factor(df$group)
