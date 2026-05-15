@@ -171,11 +171,18 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
       genes <- input$feature
       grp   <- group_by_col()
       req(!is.na(grp), grp %in% colnames(obj()@meta.data))
-      df <- FetchData(obj(), vars = c(grp, genes))
+      # Set SCT as default so FetchData resolves gene names correctly
+      plot_obj <- obj()
+      DefaultAssay(plot_obj) <- "SCT"
+      df <- FetchData(plot_obj, vars = c(grp, genes))
+      # Drop any genes that FetchData couldn't find
+      found_genes <- intersect(genes, colnames(df))
+      req(length(found_genes) > 0)
+      df <- df[, c(grp, found_genes), drop = FALSE]
       colnames(df)[1] <- "group"
       df$group <- factor(df$group)
-      if (length(genes) == 1) {
-        df$gene <- genes
+      if (length(found_genes) == 1) {
+        df$gene <- found_genes
         colnames(df)[2] <- "expression"
       } else {
         df <- tidyr::pivot_longer(df, cols = -group, names_to = "gene", values_to = "expression")
