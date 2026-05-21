@@ -18,6 +18,7 @@ library(bsicons)
 library(Seurat)
 library(periscope2)
 library(shinyjs)
+library(commonmark)
 source("setup.R")
 
 ## Source UI modules
@@ -83,6 +84,38 @@ card_tabib_DEGs <- card(
 
 
 
+
+chatPanel <- function() {
+  div(
+    id = "chat-panel",
+    style = "display: flex; flex-direction: column; height: 620px;",
+    tags$script(HTML('
+      Shiny.addCustomMessageHandler("chat_scroll_bottom", function(msg) {
+        var el = document.getElementById("chat-messages");
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+    ')),
+    div(
+      id    = "chat-messages",
+      style = "flex: 1; overflow-y: auto; padding: 8px 4px; border: 1px solid #e0e0e0; border-radius: 6px; background: #fafafa; margin-bottom: 10px;",
+      uiOutput("chat_history_ui")
+    ),
+    div(
+      style = "display: flex; gap: 8px; align-items: flex-end;",
+      div(style = "flex: 1;",
+        textAreaInput(
+          "chat_input", label = NULL,
+          placeholder = "Ask about this dataset — e.g. Which clusters express CD8A?",
+          rows = 2, resize = "none", width = "100%"
+        )
+      ),
+      actionButton("chat_send", "Send", class = "btn-primary")
+    ),
+    div(style = "margin-top: 4px;",
+      actionLink("chat_clear", "Clear conversation", style = "font-size: 11px; color: #999;")
+    )
+  )
+}
 
 # ########################################### Define UI ########################################
 ui <- page_navbar(
@@ -179,7 +212,10 @@ ui <- page_navbar(
                           card_tabib_DEGs),
                 nav_panel(title = "Metadata",
                           value = "meta_table",
-                          uiOutput("meta_df"))
+                          uiOutput("meta_df")),
+                nav_panel(title = "AI Assistant",
+                          value = "chat",
+                          chatPanel())
               ),
               
               

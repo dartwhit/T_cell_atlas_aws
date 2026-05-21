@@ -10,10 +10,18 @@ library(stringr)
 library(VAM)
 library(shinyjs)
 library(tidyr)
+library(httr2)
+library(jsonlite)
+library(glue)
+library(commonmark)
 source("setup.R")
 source("modules/dataset_gallery_module.R")
 source("modules/explore_sidebar_module.R")
 source("modules/spatial_unit.R")
+source("atlas_tools.R")
+source("tool_schemas.R")
+source("tool_dispatcher.R")
+source("chat_loop.R")
 
 options(shiny.trace = TRUE)
 
@@ -1137,5 +1145,96 @@ server <- function(input, output, session) {
     "Metadata not available for the selected dataset."
   })
 
+
+  # ========================= AI Chat panel =========================
+
+  MAX_CALLS_PER_SESSION <- 50L
+  chat_history   <- reactiveVal(list())
+  chat_call_count <- reactiveVal(0L)
+
+  # Clear chat when a new dataset is loaded
+  observeEvent(seurat_obj(), {
+    chat_history(list())
+    chat_call_count(0L)
+  }, ignoreNULL = TRUE, ignoreInit = TRUE)
+
+  observeEvent(input$chat_send, {
+    user_message <- trimws(input$chat_input)
+    if (nchar(user_message) == 0) return()
+
+    if (chat_call_count() >= MAX_CALLS_PER_SESSION) {
+      showNotification("Chat limit reached for this session.", type = "warning")
+      return()
+    }
+    chat_call_count(chat_call_count() + 1L)
+
+    req(seurat_obj())
+
+    history <- chat_history()
+    history <- c(history, list(list(role = "user", content = user_message)))
+    chat_history(history)
+    updateTextAreaInput(session, "chat_input", value = "")
+
+    dataset_name <- sidebar_inputs$study() %||% "unknown dataset"
+    system_prompt <- glue(
+      "You are an expert single-cell RNA-seq analyst assistant embedded in the SSc Cell Atlas browser. ",
+      "The user has loaded the dataset: {dataset_name}. ",
+      "Answer questions about gene expression, cell clusters, and cell types using the tools provided. ",
+      "Always call get_dataset_summary first if you are unsure what is available. ",
+      "Keep answers concise and focused on the biological question. ",
+      "When presenting tabular results, format them as readable markdown tables. ",
+      "Never make up gene names or expression values — only report what the tools return."
+    )
+
+    response_text <- tryCatch(
+      withProgress(message = "Atlas AI is thinking…", value = 0.5, {
+        run_tool_loop(
+          messages      = history,
+          system_prompt = system_prompt,
+          seurat_obj    = seurat_obj(),
+          tool_schemas  = atlas_tool_schemas
+        )
+      }),
+      error = function(e) {
+        paste0("**Error:** ", conditionMessage(e))
+      }
+    )
+
+    history <- c(history, list(list(role = "assistant", content = response_text)))
+    chat_history(history)
+    session$sendCustomMessage("chat_scroll_bottom", list())
+  })
+
+  output$chat_history_ui <- renderUI({
+    history <- chat_history()
+    if (length(history) == 0) {
+      return(p("Load a dataset, then ask a question about it.",
+               style = "color: #aaa; font-size: 13px; padding: 8px;"))
+    }
+
+    msgs <- lapply(history, function(msg) {
+      is_user <- msg$role == "user"
+      div(
+        style = paste0(
+          "margin-bottom: 10px; padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.5; ",
+          if (is_user) "background: #e8f4fd; margin-left: 40px;" else "background: #f5f5f5; margin-right: 40px;"
+        ),
+        tags$strong(if (is_user) "You" else "Atlas AI"),
+        tags$br(),
+        if (is_user) {
+          tags$span(msg$content)
+        } else {
+          HTML(commonmark::markdown_html(msg$content))
+        }
+      )
+    })
+
+    tagList(msgs)
+  })
+
+  observeEvent(input$chat_clear, {
+    chat_history(list())
+    chat_call_count(0L)
+  })
 
 }

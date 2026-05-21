@@ -1,2 +1,3 @@
 app_code/data/
 app_code/auth/
+.env

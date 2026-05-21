@@ -31,6 +31,7 @@ services:
     environment:
       - SHINY_LOG_LEVEL=INFO
       - CONTAINER_NAME=shiny-app-1
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     volumes:
       - /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro
       - shiny-logs-1:/var/log/shiny-server
@@ -56,6 +57,7 @@ services:
     environment:
       - SHINY_LOG_LEVEL=INFO
       - CONTAINER_NAME=shiny-app-2
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     volumes:
       - /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro
       - shiny-logs-2:/var/log/shiny-server
@@ -81,6 +83,7 @@ services:
     environment:
       - SHINY_LOG_LEVEL=INFO
       - CONTAINER_NAME=shiny-app-3
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     volumes:
       - /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro
       - shiny-logs-3:/var/log/shiny-server
