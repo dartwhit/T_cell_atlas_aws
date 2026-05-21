@@ -66,6 +66,9 @@ jobs:
             echo "🛠 Building images with cache..."
             docker-compose build --pull
 
+            echo "🔐 Setting up environment..."
+            echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" > .env
+
             echo "🔐 Verifying port 80 is free..."
             if sudo lsof -ti:80 >/dev/null 2>&1; then
               echo "❌ Port 80 is still in use!"

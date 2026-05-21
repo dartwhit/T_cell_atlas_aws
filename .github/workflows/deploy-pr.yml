@@ -84,6 +84,7 @@ jobs:
               --restart unless-stopped \
               -p "${PR_PORT}:3838" \
               -e SHINY_LOG_STDERR=1 \
+              -e ANTHROPIC_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}" \
               -v /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro \
               -v "/home/ubuntu/atlas/pr_data/pr-${PR_NUM}:/srv/shiny-server/data" \
               -v "/home/ubuntu/atlas/pr_cache/pr-${PR_NUM}:/srv/shiny-server/atlas/app_cache" \
