@@ -92,12 +92,30 @@ jobs:
               "atlas:pr-${PR_NUM}"
 
             echo "🩺 Health check..."
-            sleep 5
-            if curl -sSf "http://localhost:${PR_PORT}/atlas/" >/dev/null; then
-              echo "✅ PR container is running successfully!"
-            else
-              echo "❌ Health check failed. Recent logs:" >&2
-              docker logs --tail=200 "$CONTAINER_NAME" || true
+            HEALTH_OK=0
+            for attempt in $(seq 1 24); do
+              if curl -sSf "http://localhost:${PR_PORT}/atlas/" >/dev/null; then
+                HEALTH_OK=1
+                echo "✅ PR container is running successfully!"
+                break
+              fi
+
+              # If container exits early, surface logs immediately instead of waiting.
+              if ! docker ps --filter "name=^/${CONTAINER_NAME}$" --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
+                echo "❌ Container exited before passing health check." >&2
+                docker ps -a --filter "name=^/${CONTAINER_NAME}$" --format "table {{.Names}}\t{{.Status}}" >&2 || true
+                docker logs --tail=200 "$CONTAINER_NAME" >&2 || true
+                break
+              fi
+
+              echo "⏳ Health check attempt ${attempt}/24 failed; retrying in 5s..."
+              sleep 5
+            done
+
+            if [ "$HEALTH_OK" -ne 1 ]; then
+              echo "❌ Health check failed after 120s. Container state/logs:" >&2
+              docker ps -a --filter "name=^/${CONTAINER_NAME}$" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" >&2 || true
+              docker logs --tail=200 "$CONTAINER_NAME" >&2 || true
               exit 1
             fi
 
