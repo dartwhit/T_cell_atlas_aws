@@ -325,13 +325,14 @@ server <- function(input, output, session) {
     gene_list_path <- data_path(sidebar_inputs$study(), dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["gene_list"]])
     
     
-    req(DEG_path())
-    print(paste("Loading DEGs from", DEG_path()))
+    deg_path <- DEG_path()
+    req(nzchar(deg_path))
+    print(paste("Loading DEGs from", deg_path))
     deg_df <- tryCatch({
-      if (endsWith(DEG_path(), ".csv")) {
-        read.csv(DEG_path())
+      if (endsWith(deg_path, ".csv")) {
+        read.csv(deg_path)
       } else {
-        read.delim(DEG_path(), sep = "\t")
+        read.delim(deg_path, sep = "\t")
       }
     }, error = function(e) {
       cat("Error reading DEG file:", conditionMessage(e), "\n")
@@ -433,14 +434,15 @@ server <- function(input, output, session) {
   
   observeEvent(input$by_disease, {
     req(sidebar_inputs$load_btn() > 0)
-    req(DEG_path())
-    
-    print(paste("Reloading DEGs from", DEG_path()))
+    deg_path <- DEG_path()
+    req(nzchar(deg_path))
+
+    print(paste("Reloading DEGs from", deg_path))
     deg_df <- tryCatch({
-      if (endsWith(DEG_path(), ".csv")) {
-        read.csv(DEG_path())
+      if (endsWith(deg_path, ".csv")) {
+        read.csv(deg_path)
       } else {
-        read.delim(DEG_path(), sep = "\t")
+        read.delim(deg_path, sep = "\t")
       }
     }, error = function(e) {
       cat("Error reading DEG file:", conditionMessage(e), "\n")
