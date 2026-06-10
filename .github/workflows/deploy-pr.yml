@@ -38,7 +38,7 @@ jobs:
           script_stop: true
           command_timeout: 30m
           script: |
-            set -euo pipefail
+            set -euxo pipefail
 
             PR_NUM=${{ github.event.pull_request.number }}
             PR_PORT=${{ steps.port.outputs.pr_port }}
