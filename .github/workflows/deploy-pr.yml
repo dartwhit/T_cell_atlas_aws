@@ -60,13 +60,17 @@ jobs:
             sudo chmod 777 "/home/ubuntu/atlas/pr_data/pr-${PR_NUM}"
 
             echo "📋 Initializing user database for PR container..."
-            if [ -f /home/ubuntu/atlas/data/users_current.sqlite ]; then
-              cp /home/ubuntu/atlas/data/users_current.sqlite "/home/ubuntu/atlas/pr_data/pr-${PR_NUM}/users_current.sqlite"
-              sudo chmod 666 "/home/ubuntu/atlas/pr_data/pr-${PR_NUM}/users_current.sqlite"
-              echo "  ✓ Users database copied for PR environment"
-            else
-              echo "  ⚠️  Warning: Source database not found at /home/ubuntu/atlas/data/users_current.sqlite — user authentication will fail in this PR container"
-            fi
+            USERS_DB_SRC="/home/ubuntu/atlas/data/users_current.sqlite"
+            USERS_DB_DEST="/home/ubuntu/atlas/pr_data/pr-${PR_NUM}/users_current.sqlite"
+            {
+              if test -f "$USERS_DB_SRC"; then
+                cp "$USERS_DB_SRC" "$USERS_DB_DEST"
+                sudo chmod 666 "$USERS_DB_DEST"
+                echo "  ✓ Users database copied for PR environment"
+              else
+                echo "  ⚠️  Warning: Source database not found at $USERS_DB_SRC — user authentication will fail in this PR container"
+              fi
+            } || true
 
             echo "🧹 Removing existing PR container (if any)..."
             docker rm -f "$CONTAINER_NAME" || true
