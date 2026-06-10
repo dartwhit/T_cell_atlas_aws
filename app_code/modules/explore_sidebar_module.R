@@ -99,19 +99,21 @@ explore_sidebar_server <- function(id, selected_study_from_gallery) {
     ns <- session$ns
 
     output$data_level_ui <- renderUI({
-      selectInput(ns("data_level"),
-                  "Select data to visualize",
-                  choices = data_level_choices[[input$study]])
+      choices <- data_level_choices[[input$study]]
+      req(length(choices) > 0)
+      selectInput(ns("data_level"), "Select data to visualize", choices = choices)
     })
 
     observeEvent(selected_study_from_gallery(), {
       study_info <- selected_study_from_gallery()
-      # The gallery now returns a list(id=..., view=...)
-      # We only care about the id here.
       if (is.list(study_info) && !is.null(study_info$id)) {
-        updateSelectInput(session, "study", selected = study_info$id)
-      } else {
-        # Fallback for old behavior if needed
+        # Only update if this study has scRNA data levels; spatial-only studies
+        # (e.g. li) have NULL data_level_choices and belong in the Spatial tab.
+        if (!identical(study_info$view, "spatial") &&
+            length(data_level_choices[[study_info$id]]) > 0) {
+          updateSelectInput(session, "study", selected = study_info$id)
+        }
+      } else if (!is.null(study_info)) {
         updateSelectInput(session, "study", selected = study_info)
       }
     })
