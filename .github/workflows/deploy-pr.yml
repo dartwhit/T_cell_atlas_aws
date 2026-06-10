@@ -60,7 +60,7 @@ jobs:
             sudo chmod 777 "/home/ubuntu/atlas/pr_data/pr-${PR_NUM}"
 
             echo "📋 Initializing user database for PR container..."
-            USERS_DB_SRC="/home/ubuntu/atlas/data/users_current.sqlite"
+            USERS_DB_SRC="/home/ubuntu/atlas/data/auth/users_current.sqlite"
             USERS_DB_DEST="/home/ubuntu/atlas/pr_data/pr-${PR_NUM}/users_current.sqlite"
             {
               if test -f "$USERS_DB_SRC"; then

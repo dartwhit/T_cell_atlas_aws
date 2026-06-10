@@ -112,7 +112,7 @@ cat /var/log/shiny-server/atlas-shiny-*.log | tail -100
 5. **VAMcdf assay absent**: `server.R` line ~347 accesses `@assays$VAMcdf` — subset objects must have this assay.
 
 ### Authentication (SQLite)
-Users DB: `/home/ubuntu/atlas/data/users_current.sqlite` (host) → copied to Docker volume `users-db` on first deploy.
+Users DB: `/home/ubuntu/atlas/data/auth/users_current.sqlite` (host) → copied to Docker volume `users-db` on first deploy.
 Force re-sync: trigger `deploy.yml` workflow with `force_db_sync: true`.
 
 ## Code Conventions

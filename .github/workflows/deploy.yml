@@ -84,38 +84,38 @@ jobs:
             # Check if force sync is requested or if database doesn't exist
             if [ "${{ github.event.inputs.force_db_sync }}" = "true" ]; then
               echo "  🔄 Force sync requested - overwriting volume with host DB..."
-              if [ -f /home/ubuntu/atlas/data/users_current.sqlite ]; then
+              if [ -f /home/ubuntu/atlas/data/auth/users_current.sqlite ]; then
                 docker run --rm \
                   -v t_cell_atlas_aws_users-db:/data \
                   -v /home/ubuntu/atlas/data:/source \
-                  alpine cp /source/users_current.sqlite /data/users_current.sqlite
-                
+                  alpine cp /source/auth/users_current.sqlite /data/users_current.sqlite
+
                 docker run --rm \
                   -v t_cell_atlas_aws_users-db:/data \
                   alpine chmod 666 /data/users_current.sqlite
-                
+
                 echo "  ✓ Database synced from host"
               else
-                echo "  ❌ Source database not found at /home/ubuntu/atlas/data/users_current.sqlite"
+                echo "  ❌ Source database not found at /home/ubuntu/atlas/data/auth/users_current.sqlite"
               fi
             elif docker run --rm -v t_cell_atlas_aws_users-db:/data alpine test -f /data/users_current.sqlite 2>/dev/null; then
               echo "  ✓ Database already exists in volume (not overwriting)"
             else
               echo "  Copying users database from host to Docker volume..."
-              if [ -f /home/ubuntu/atlas/data/users_current.sqlite ]; then
+              if [ -f /home/ubuntu/atlas/data/auth/users_current.sqlite ]; then
                 docker run --rm \
                   -v t_cell_atlas_aws_users-db:/data \
                   -v /home/ubuntu/atlas/data:/source \
-                  alpine cp /source/users_current.sqlite /data/users_current.sqlite
-                
+                  alpine cp /source/auth/users_current.sqlite /data/users_current.sqlite
+
                 echo "  Setting database permissions..."
                 docker run --rm \
                   -v t_cell_atlas_aws_users-db:/data \
                   alpine chmod 666 /data/users_current.sqlite
-                
+
                 echo "  ✓ Database initialized"
               else
-                echo "  ⚠️  Warning: Source database not found at /home/ubuntu/atlas/data/users_current.sqlite"
+                echo "  ⚠️  Warning: Source database not found at /home/ubuntu/atlas/data/auth/users_current.sqlite"
               fi
             fi
             
