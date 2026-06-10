@@ -28,7 +28,7 @@ test_server <- function(input, output, session) {
   spatial_server(
     id = "sp1",
     # Option A: pass a path for quick testing
-    rds_path = reactive("../data/2025-07-07_MaSSc_Visium_PRECAST_SingleCellPredicted_RegionsNamed_CARD.rds")
+    rds_path = reactive("../data/ma/2025-07-07_MaSSc_Visium_PRECAST_SingleCellPredicted_RegionsNamed_CARD.rds")
   )
 }
 

@@ -66,7 +66,7 @@ server <- function(input, output, session) {
   # Get the path to the selected spatial data
   spatial_data_path <- reactive({
     req(input$spatial_study_selector)
-    paste0(inDir, dataset_files[[input$spatial_study_selector]][["spatial_seurat"]])
+    data_path(input$spatial_study_selector, dataset_files[[input$spatial_study_selector]][["spatial_seurat"]])
   })
 
     spatial_server(
@@ -263,19 +263,19 @@ server <- function(input, output, session) {
     
     if (isTRUE(compare)) {
       if (level == "full") {
-        paste0(inDir, DE_dir, dataset_files[[study]][[level]][["DE_by_disease_auto"]])
+        data_path(study, dataset_files[[study]][[level]][["DE_by_disease_auto"]], de = TRUE)
       } else {
-        paste0(inDir, DE_dir, dataset_files[[study]][[level]][["DE_by_disease"]])
+        data_path(study, dataset_files[[study]][[level]][["DE_by_disease"]], de = TRUE)
       }
     } else {
       if (level == "full") {
         if (sidebar_inputs$anno() == TRUE) {
-          paste0(inDir, DE_dir, dataset_files[[study]][[level]][["DEGs_auto"]])
+          data_path(study, dataset_files[[study]][[level]][["DEGs_auto"]], de = TRUE)
         } else {
-          paste0(inDir, DE_dir, dataset_files[[study]][[level]][["DEGs_broad"]])
+          data_path(study, dataset_files[[study]][[level]][["DEGs_broad"]], de = TRUE)
         }
       } else {
-        paste0(inDir, DE_dir, dataset_files[[study]][[level]][["DEGs"]])
+        data_path(study, dataset_files[[study]][[level]][["DEGs"]], de = TRUE)
       }
     }
   })
@@ -285,13 +285,13 @@ server <- function(input, output, session) {
     
     if(sidebar_inputs$data_level() == "full") {
       if(sidebar_inputs$anno() ==TRUE) {
-        paste0(inDir,DE_dir,dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["VAM_by_disease_auto"]])
+        data_path(sidebar_inputs$study(), dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["VAM_by_disease_auto"]], de = TRUE)
       } else {
-        paste0(inDir,DE_dir,dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["VAM_by_disease_broad"]])
+        data_path(sidebar_inputs$study(), dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["VAM_by_disease_broad"]], de = TRUE)
       }
     } else {
-      paste0(inDir, DE_dir, dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["VAM_by_disease"]])
-      
+      data_path(sidebar_inputs$study(), dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["VAM_by_disease"]], de = TRUE)
+
     }
   })
   
@@ -321,17 +321,18 @@ server <- function(input, output, session) {
     shinyjs::show(selector = "#explore_sidebar_module-hidden_menu")
     
     ################## get files paths of the selected dataset #############
-    seurat_path <- paste0(inDir,dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["seurat"]])
-    gene_list_path <- paste0(inDir,dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["gene_list"]])
+    seurat_path <- data_path(sidebar_inputs$study(), dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["seurat"]])
+    gene_list_path <- data_path(sidebar_inputs$study(), dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["gene_list"]])
     
     
-    req(DEG_path())
-    print(paste("Loading DEGs from", DEG_path()))
+    deg_path <- DEG_path()
+    req(nzchar(deg_path))
+    print(paste("Loading DEGs from", deg_path))
     deg_df <- tryCatch({
-      if (endsWith(DEG_path(), ".csv")) {
-        read.csv(DEG_path())
+      if (endsWith(deg_path, ".csv")) {
+        read.csv(deg_path)
       } else {
-        read.delim(DEG_path(), sep = "\t")
+        read.delim(deg_path, sep = "\t")
       }
     }, error = function(e) {
       cat("Error reading DEG file:", conditionMessage(e), "\n")
@@ -352,7 +353,7 @@ server <- function(input, output, session) {
     }
     
     meta_file <- dataset_metadata_file[[sidebar_inputs$study()]]
-    metadata_path <- if (!is.null(meta_file)) paste0(inDir, meta_file) else NULL
+    metadata_path <- if (!is.null(meta_file)) data_path(sidebar_inputs$study(), meta_file) else NULL
 
     ################## Load data ##################
     # Seurat object and gene lists
@@ -386,7 +387,7 @@ server <- function(input, output, session) {
     
     # Try loading VAM df
     vam_file <- dataset_files[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]][["VAM_df"]]
-    vam_file_path <- if (!is.null(vam_file)) paste0(inDir, DE_dir, vam_file) else NULL
+    vam_file_path <- if (!is.null(vam_file)) data_path(sidebar_inputs$study(), vam_file, de = TRUE) else NULL
 
     VAM_data <- tryCatch(
       {
@@ -433,14 +434,15 @@ server <- function(input, output, session) {
   
   observeEvent(input$by_disease, {
     req(sidebar_inputs$load_btn() > 0)
-    req(DEG_path())
-    
-    print(paste("Reloading DEGs from", DEG_path()))
+    deg_path <- DEG_path()
+    req(nzchar(deg_path))
+
+    print(paste("Reloading DEGs from", deg_path))
     deg_df <- tryCatch({
-      if (endsWith(DEG_path(), ".csv")) {
-        read.csv(DEG_path())
+      if (endsWith(deg_path, ".csv")) {
+        read.csv(deg_path)
       } else {
-        read.delim(DEG_path(), sep = "\t")
+        read.delim(deg_path, sep = "\t")
       }
     }, error = function(e) {
       cat("Error reading DEG file:", conditionMessage(e), "\n")
