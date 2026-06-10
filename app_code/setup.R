@@ -1,5 +1,12 @@
 inDir <- "data/"
-DE_dir <- "DE_dfs/"
+# DE/VAM tables now live in data/<study>/de/ ; everything else in data/<study>/
+
+# Resolve a data file to its per-dataset folder. `de = TRUE` for DE/VAM tables.
+data_path <- function(study, name, de = FALSE) {
+  rel <- if (de) file.path(study, "de", name) else file.path(study, name)
+  paste0(inDir, rel)
+}
+
 cat("Working directory is:", getwd(), "\n", file = stderr())
 
 # Default comparison metadata for datasets without explicit configuration
