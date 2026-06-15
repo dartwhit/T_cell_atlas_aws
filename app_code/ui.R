@@ -9,7 +9,10 @@
 #test change
 
 library(shiny)
-local_dev <- nchar(Sys.getenv("LOCAL_DEV")) > 0
+# Local-dev auth bypass: only enabled for explicit truthy values so a
+# misconfigured env (e.g. LOCAL_DEV=0) can never accidentally ship with
+# authentication disabled.
+local_dev <- tolower(Sys.getenv("LOCAL_DEV")) %in% c("1", "true", "yes", "on")
 if (!local_dev) library(shinymanager)
 library(shinyWidgets)
 library(bslib)

@@ -1,7 +1,10 @@
 cat("✅ server.R initialized at", Sys.time(), "\n", file = stderr())
 
 library(shiny)
-local_dev <- nchar(Sys.getenv("LOCAL_DEV")) > 0
+# Local-dev auth bypass: only enabled for explicit truthy values so a
+# misconfigured env (e.g. LOCAL_DEV=0) can never accidentally ship with
+# authentication disabled.
+local_dev <- tolower(Sys.getenv("LOCAL_DEV")) %in% c("1", "true", "yes", "on")
 if (!local_dev) library(shinymanager)
 library(Seurat)
 library(DT)
@@ -375,8 +378,26 @@ server <- function(input, output, session) {
     ################## Load data ##################
     # Seurat object and gene lists
     print(seurat_path)
-    seurat_obj(step_time("readRDS seurat", readRDS(seurat_path)))
-    gene_list_obj(step_time("readRDS gene_list", readRDS(gene_list_path)))
+    # Data files live outside the repo on a mounted volume, so reads are
+    # operationally fragile (missing/corrupt RDS, wrong mount). Catch failures,
+    # surface a clear message, and stop the handler instead of letting the
+    # error silently kill the reactive chain.
+    loaded <- tryCatch({
+      list(
+        seurat = step_time("readRDS seurat", readRDS(seurat_path)),
+        gene_list = step_time("readRDS gene_list", readRDS(gene_list_path))
+      )
+    }, error = function(e) {
+      cat("Error reading data files:", conditionMessage(e), "\n", file = stderr())
+      showNotification(
+        paste("Error loading data files:", conditionMessage(e)),
+        type = "error", duration = NULL
+      )
+      NULL
+    })
+    req(loaded)
+    seurat_obj(loaded$seurat)
+    gene_list_obj(loaded$gene_list)
     
     vam_names <- rownames(seurat_obj()@assays$VAMcdf)
     pathway_names_for_display <- str_remove(vam_names,"HALLMARK-")
