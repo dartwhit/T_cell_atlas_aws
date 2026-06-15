@@ -9,7 +9,8 @@
 #test change
 
 library(shiny)
-library(shinymanager)
+local_dev <- nchar(Sys.getenv("LOCAL_DEV")) > 0
+if (!local_dev) library(shinymanager)
 library(shinyWidgets)
 library(bslib)
 library(shinycssloaders)
@@ -222,7 +223,13 @@ ui <- page_navbar(
 
 )
 
-# Wrap UI with shinymanager authentication
-ui <- secure_app(ui, enable_admin = TRUE)
+# Wrap UI with shinymanager authentication (skipped in LOCAL_DEV mode)
+if (!local_dev) {
+  ui <- secure_app(ui, enable_admin = TRUE)
+}
+
+# Final expression: ensures `ui` is returned when Shiny loads ui.R/server.R
+# as a two-file app (e.g. RStudio "Run App"), not just via app.R.
+ui
 
 
