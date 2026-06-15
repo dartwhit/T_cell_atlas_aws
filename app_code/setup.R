@@ -16,12 +16,19 @@ data_path <- function(study, name, de = FALSE) {
 qs2_available <- requireNamespace("qs2", quietly = TRUE)
 # Threads for qs_read. Reads are short bursts, so a small count gives a big
 # speedup (0.9s -> 0.2s on a 230MB object) without meaningfully oversubscribing
-# cores shared by the other Shiny workers. Override with QS2_READ_THREADS.
+# cores shared by the other Shiny workers. Default 4, but never more than the
+# available cores; override with QS2_READ_THREADS (also capped to cores).
 qs2_read_threads <- {
+  cores <- parallel::detectCores()
+  if (is.na(cores) || cores < 1) cores <- 1L
   n <- suppressWarnings(as.integer(Sys.getenv("QS2_READ_THREADS")))
-  if (is.na(n) || n < 1) 4L else n
+  if (is.na(n) || n < 1) min(4L, cores) else min(n, cores)
 }
 read_object <- function(path) {
+  if (length(path) != 1 || is.na(path) || !nzchar(path)) {
+    stop("read_object(): 'path' must be a single non-empty file path; got ",
+         deparse(path))
+  }
   if (qs2_available) {
     qs2_path <- sub("\\.rds$", ".qs2", path, ignore.case = TRUE)
     if (qs2_path != path && file.exists(qs2_path)) {

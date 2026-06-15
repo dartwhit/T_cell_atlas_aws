@@ -44,8 +44,10 @@ if (length(args) < 1 || !nzchar(args[[1]])) {
 data_dir <- args[[1]]
 overwrite <- identical(Sys.getenv("OVERWRITE"), "1")
 nthreads <- {
+  cores <- parallel::detectCores()
+  if (is.na(cores) || cores < 1) cores <- 1L
   n <- suppressWarnings(as.integer(Sys.getenv("QS2_NTHREADS")))
-  if (is.na(n) || n < 1) max(1L, parallel::detectCores()) else n
+  if (is.na(n) || n < 1) cores else min(n, cores)
 }
 
 if (!dir.exists(data_dir)) stop("Data dir not found: ", data_dir)
@@ -103,7 +105,7 @@ for (rds in rds_files) {
 cat(sprintf("\nDone. converted=%d skipped=%d failed=%d\n",
             converted, skipped, failed))
 if (converted > 0) {
-  cat(sprintf("Total size: %.0f MB (.rds) -> %.0f MB (.qs2)\n",
+  cat(sprintf("Converted files only: %.0f MB (.rds) -> %.0f MB (.qs2)\n",
               total_rds / 1e6, total_qs2 / 1e6))
 }
 if (failed > 0) quit(status = 1)
