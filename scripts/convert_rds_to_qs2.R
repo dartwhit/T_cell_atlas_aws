@@ -10,9 +10,11 @@
 # the originals can be kept as a fallback.
 #
 # Usage:
-#   Rscript scripts/convert_rds_to_qs2.R [DATA_DIR]
+#   Rscript scripts/convert_rds_to_qs2.R <DATA_DIR>
 #
-#   DATA_DIR  Root to scan recursively for *.rds (default: app_code/data).
+#   DATA_DIR  Root to scan recursively for *.rds. Required.
+#             Local:  app_code/data
+#             EC2:    the mounted data path, e.g. /srv/shiny-server/atlas/data
 #
 # Env:
 #   QS2_NTHREADS   Threads for qs_save (default: all available cores).
@@ -30,7 +32,16 @@ suppressPackageStartupMessages({
 })
 
 args <- commandArgs(trailingOnly = TRUE)
-data_dir <- if (length(args) >= 1) args[[1]] else "app_code/data"
+if (length(args) < 1 || !nzchar(args[[1]])) {
+  cat("Usage: Rscript scripts/convert_rds_to_qs2.R <DATA_DIR>\n",
+      "  <DATA_DIR>  Root to scan recursively for *.rds.\n",
+      "              On EC2 pass the mounted data path, e.g.\n",
+      "              /srv/shiny-server/atlas/data\n",
+      "Env: QS2_NTHREADS (save threads), OVERWRITE=1 (re-convert).\n",
+      sep = "")
+  quit(status = 2)
+}
+data_dir <- args[[1]]
 overwrite <- identical(Sys.getenv("OVERWRITE"), "1")
 nthreads <- {
   n <- suppressWarnings(as.integer(Sys.getenv("QS2_NTHREADS")))
