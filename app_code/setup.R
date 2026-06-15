@@ -7,6 +7,30 @@ data_path <- function(study, name, de = FALSE) {
   paste0(inDir, rel)
 }
 
+# Load a serialized R object, preferring a fast qs2 sibling when present.
+# Given a path like ".../foo.rds", if ".../foo.qs2" exists it is read with
+# qs2::qs_read() (zstd: ~7x faster to load than gzipped RDS, small on disk).
+# Otherwise falls back to readRDS(), so the app works before/without conversion.
+# `qs2_available` is checked once at startup to avoid a requireNamespace() call
+# on every load.
+qs2_available <- requireNamespace("qs2", quietly = TRUE)
+# Threads for qs_read. Reads are short bursts, so a small count gives a big
+# speedup (0.9s -> 0.2s on a 230MB object) without meaningfully oversubscribing
+# cores shared by the other Shiny workers. Override with QS2_READ_THREADS.
+qs2_read_threads <- {
+  n <- suppressWarnings(as.integer(Sys.getenv("QS2_READ_THREADS")))
+  if (is.na(n) || n < 1) 4L else n
+}
+read_object <- function(path) {
+  if (qs2_available) {
+    qs2_path <- sub("\\.rds$", ".qs2", path, ignore.case = TRUE)
+    if (qs2_path != path && file.exists(qs2_path)) {
+      return(qs2::qs_read(qs2_path, nthreads = qs2_read_threads))
+    }
+  }
+  readRDS(path)
+}
+
 cat("Working directory is:", getwd(), "\n", file = stderr())
 
 # Default comparison metadata for datasets without explicit configuration

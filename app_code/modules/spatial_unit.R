@@ -59,7 +59,7 @@ spatial_server <- function(id, spat_obj = NULL, rds_path = NULL) {
         spat_obj
       } else {
         req(rds_path())
-        readRDS(rds_path())
+        read_object(rds_path())  # prefers a .qs2 sibling; falls back to readRDS
       }
     })
 
