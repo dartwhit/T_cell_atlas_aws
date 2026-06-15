@@ -19,6 +19,9 @@
 # Env:
 #   QS2_NTHREADS   Threads for qs_save (default: all available cores).
 #   OVERWRITE      "1" to re-convert even if an up-to-date .qs2 exists.
+#   SLIM           "1" to drop app-unused assays/layers (`integrated`,
+#                  `scale.data`) from non-spatial Seurat objects before saving.
+#                  ~10x smaller files; requires the 'Seurat' package.
 #
 # Notes:
 #   - DE/VAM tables are plain text (.txt/.csv) and are NOT touched.
@@ -50,6 +53,44 @@ nthreads <- {
   if (is.na(n) || n < 1) cores else min(n, cores)
 }
 
+# Optional slimming: drop assays/layers the app never reads (the `integrated`
+# assay and all `scale.data` layers are ~80% of the object's weight but unused
+# by the Shiny app). Cuts file size ~10x, which is the dominant cost on EC2's
+# mounted volume. Spatial objects are left untouched (the spatial viewer needs
+# their full structure). Enable with SLIM=1.
+slim_enabled <- identical(Sys.getenv("SLIM"), "1")
+
+# Assays/reductions/layers the app actually uses (intersected per-object, so
+# it's safe across studies/levels that have different subsets).
+SEURAT_KEEP_ASSAYS <- c("RNA", "SCT", "VAMdist", "VAMcdf")
+SEURAT_KEEP_REDUCS <- c("pca", "umap")
+SEURAT_KEEP_LAYERS <- c("counts", "data")
+
+if (slim_enabled && !requireNamespace("Seurat", quietly = TRUE)) {
+  stop("SLIM=1 requires the 'Seurat' package.")
+}
+
+# Returns a slimmed copy for non-spatial Seurat objects; everything else
+# (gene-list lists, spatial Seurat objects, unrecognized layouts) is returned
+# unchanged. Falls back to the original object if DietSeurat errors.
+slim_seurat <- function(obj) {
+  if (!slim_enabled || !inherits(obj, "Seurat")) return(obj)
+  if (length(obj@images) > 0 || "Spatial" %in% SeuratObject::Assays(obj)) {
+    return(obj)  # spatial: keep whole
+  }
+  assays <- intersect(SEURAT_KEEP_ASSAYS, SeuratObject::Assays(obj))
+  if (length(assays) == 0) return(obj)  # unfamiliar layout: don't risk it
+  reducs <- intersect(SEURAT_KEEP_REDUCS, SeuratObject::Reductions(obj))
+  tryCatch(
+    Seurat::DietSeurat(obj, layers = SEURAT_KEEP_LAYERS,
+                       assays = assays, dimreducs = reducs),
+    error = function(e) {
+      cat(sprintf("    (slim skipped: %s)\n", conditionMessage(e)))
+      obj
+    }
+  )
+}
+
 if (!dir.exists(data_dir)) stop("Data dir not found: ", data_dir)
 
 rds_files <- list.files(data_dir, pattern = "\\.rds$", recursive = TRUE,
@@ -59,8 +100,8 @@ if (length(rds_files) == 0) {
   quit(status = 0)
 }
 
-cat(sprintf("Found %d .rds file(s) under %s  (qs2 threads: %d)\n",
-            length(rds_files), data_dir, nthreads))
+cat(sprintf("Found %d .rds file(s) under %s  (qs2 threads: %d, slim: %s)\n",
+            length(rds_files), data_dir, nthreads, if (slim_enabled) "on" else "off"))
 
 total_rds <- 0
 total_qs2 <- 0
@@ -81,6 +122,7 @@ for (rds in rds_files) {
 
   res <- tryCatch({
     t_read <- system.time(obj <- readRDS(rds))["elapsed"]
+    obj <- slim_seurat(obj)
     qs2::qs_save(obj, qs2, nthreads = nthreads)
     # Round-trip sanity check: confirm the file reads back.
     t_qs <- system.time(invisible(qs2::qs_read(qs2, nthreads = nthreads)))["elapsed"]
