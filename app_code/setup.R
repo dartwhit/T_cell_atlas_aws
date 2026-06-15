@@ -32,9 +32,11 @@ read_object <- function(path) {
   if (qs2_available) {
     qs2_path <- sub("\\.rds$", ".qs2", path, ignore.case = TRUE)
     if (qs2_path != path && file.exists(qs2_path)) {
+      cat("[read_object] qs2:", qs2_path, "\n", file = stderr())
       return(qs2::qs_read(qs2_path, nthreads = qs2_read_threads))
     }
   }
+  cat("[read_object] rds:", path, "\n", file = stderr())
   readRDS(path)
 }
 
