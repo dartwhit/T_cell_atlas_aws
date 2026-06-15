@@ -46,6 +46,31 @@ This application is designed for deployment on AWS. The `Dockerfile` is used to 
 
 ## 🧪 Development & Testing
 
+### Running Locally (Auth Disabled)
+
+For quick local development you can run the Shiny app directly in R — outside Docker — with authentication disabled. Set the `LOCAL_DEV` environment variable to an explicit truthy value (`1`, `true`, `yes`, or `on`) to skip the `shinymanager` login.
+
+**Requirements:**
+- R with the app's packages installed (Seurat, VAM, shinymanager, bslib, DT, plotly, shinyjs, etc.)
+- A local copy of the data folder at `app_code/data/`, with one subfolder per study matching the dataset IDs in `app_code/config/datasets.tsv` (e.g. `tmkmh/`, `tabib/`, `gur/`, `ma/`, `khanna/`, `li/`)
+
+**Run from a terminal:**
+```bash
+cd app_code
+LOCAL_DEV=1 Rscript -e "shiny::runApp('.')"
+```
+
+**Or from the R console / RStudio "Run App":**
+```r
+Sys.setenv(LOCAL_DEV = "1")
+setwd("app_code")
+shiny::runApp(".")
+```
+
+The app prints its working directory to stderr on startup, so you can confirm it resolves data paths against `app_code/data/`.
+
+> **Note:** `LOCAL_DEV` only disables authentication for local development. When unset (the default in Docker / production), the UI is wrapped with `shinymanager` and the SQLite credential database is required as normal.
+
 ### Pull Request Deployment
 
 All pull requests to the `main` branch are **automatically deployed to EC2** for manual testing. This allows you to test the full UI and backend functionality in a real environment before merging.

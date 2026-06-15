@@ -1,7 +1,11 @@
 cat("✅ server.R initialized at", Sys.time(), "\n", file = stderr())
 
 library(shiny)
-library(shinymanager)
+# Local-dev auth bypass: only enabled for explicit truthy values so a
+# misconfigured env (e.g. LOCAL_DEV=0) can never accidentally ship with
+# authentication disabled.
+local_dev <- tolower(Sys.getenv("LOCAL_DEV")) %in% c("1", "true", "yes", "on")
+if (!local_dev) library(shinymanager)
 library(Seurat)
 library(DT)
 library(ggplot2)
@@ -15,24 +19,24 @@ source("modules/dataset_gallery_module.R")
 source("modules/explore_sidebar_module.R")
 source("modules/spatial_unit.R")
 
-options(shiny.trace = TRUE)
+options(shiny.trace = FALSE)
 
 
 # Define server logic required to draw a histogram
 server <- function(input, output, session) {
-  db_path <- "/srv/shiny-server/data/users_current.sqlite"  # Fixed path to match docker mount
-  cat("Shinymanager DB (app):", db_path, "\n")
-  cat("DB exists:", file.exists(db_path), "\n")
-  cat("DB writable:", file.access(db_path, mode = 2) == 0, "\n")
-  
-  # Check database directory permissions
-  db_dir <- dirname(db_path)
-  cat("DB dir:", db_dir, "\n")
-  cat("DB dir exists:", dir.exists(db_dir), "\n")
-  cat("DB dir writable:", file.access(db_dir, mode = 2) == 0, "\n")
-  
-  # Enable WAL mode for better concurrent access
-  if (file.exists(db_path)) {
+  if (!local_dev) {
+    db_path <- "/srv/shiny-server/data/users_current.sqlite"  # Fixed path to match docker mount
+    cat("Shinymanager DB (app):", db_path, "\n")
+    cat("DB exists:", file.exists(db_path), "\n")
+    cat("DB writable:", file.access(db_path, mode = 2) == 0, "\n")
+
+    # Check database directory permissions
+    db_dir <- dirname(db_path)
+    cat("DB dir:", db_dir, "\n")
+    cat("DB dir exists:", dir.exists(db_dir), "\n")
+    cat("DB dir writable:", file.access(db_dir, mode = 2) == 0, "\n")
+
+    # Enable WAL mode for better concurrent access
     tryCatch({
       con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
       DBI::dbExecute(con, "PRAGMA journal_mode=WAL;")
@@ -42,13 +46,15 @@ server <- function(input, output, session) {
     }, error = function(e) {
       cat("Warning: Could not enable WAL mode:", conditionMessage(e), "\n")
     })
+
+    res_auth <- secure_server(
+      check_credentials = check_credentials(db = db_path)
+    )
+    output$welcome <- renderText(paste("Welcome,", res_auth$user))
+  } else {
+    cat("LOCAL_DEV mode: authentication disabled\n", file = stderr())
+    output$welcome <- renderText("Local dev")
   }
-
-  res_auth <- secure_server(
-       check_credentials = check_credentials(db = db_path)
-     )
-
-  output$welcome <- renderText(paste("Welcome,", res_auth$user))
 
 
 
@@ -314,8 +320,20 @@ server <- function(input, output, session) {
     invalidateLater(0,session)
     reset_trigger(FALSE)
     seurat_obj(NULL)
-    gc()
-    
+
+    # --- timing instrumentation ---
+    # Logs per-step wall-clock to stderr (visible in `docker logs`) so we can
+    # see where load time actually goes on the live server. `step_time()` prints
+    # the elapsed seconds for the enclosed expression and returns its value.
+    .load_t0 <- Sys.time()
+    step_time <- function(label, expr) {
+      t <- system.time(val <- force(expr))["elapsed"]
+      cat(sprintf("[load-timing] %-22s %6.2fs  (study=%s level=%s)\n",
+                  label, t, sidebar_inputs$study(), sidebar_inputs$data_level()),
+          file = stderr())
+      val
+    }
+
     req(sidebar_inputs$study(), sidebar_inputs$data_level())
     
     shinyjs::show(selector = "#explore_sidebar_module-hidden_menu")
@@ -329,11 +347,13 @@ server <- function(input, output, session) {
     req(nzchar(deg_path))
     print(paste("Loading DEGs from", deg_path))
     deg_df <- tryCatch({
-      if (endsWith(deg_path, ".csv")) {
-        read.csv(deg_path)
-      } else {
-        read.delim(deg_path, sep = "\t")
-      }
+      step_time("read DEG table", {
+        if (endsWith(deg_path, ".csv")) {
+          read.csv(deg_path)
+        } else {
+          read.delim(deg_path, sep = "\t")
+        }
+      })
     }, error = function(e) {
       cat("Error reading DEG file:", conditionMessage(e), "\n")
       showNotification(paste("Error loading DEG file:", conditionMessage(e)), type = "error", duration = NULL)
@@ -358,8 +378,26 @@ server <- function(input, output, session) {
     ################## Load data ##################
     # Seurat object and gene lists
     print(seurat_path)
-    seurat_obj(readRDS(seurat_path))
-    gene_list_obj(readRDS(gene_list_path))
+    # Data files live outside the repo on a mounted volume, so reads are
+    # operationally fragile (missing/corrupt RDS, wrong mount). Catch failures,
+    # surface a clear message, and stop the handler instead of letting the
+    # error silently kill the reactive chain.
+    loaded <- tryCatch({
+      list(
+        seurat = step_time("readRDS seurat", readRDS(seurat_path)),
+        gene_list = step_time("readRDS gene_list", readRDS(gene_list_path))
+      )
+    }, error = function(e) {
+      cat("Error reading data files:", conditionMessage(e), "\n", file = stderr())
+      showNotification(
+        paste("Error loading data files:", conditionMessage(e)),
+        type = "error", duration = NULL
+      )
+      NULL
+    })
+    req(loaded)
+    seurat_obj(loaded$seurat)
+    gene_list_obj(loaded$gene_list)
     
     vam_names <- rownames(seurat_obj()@assays$VAMcdf)
     pathway_names_for_display <- str_remove(vam_names,"HALLMARK-")
@@ -371,7 +409,7 @@ server <- function(input, output, session) {
     meta_data <- tryCatch(
       {
         if (!is.null(meta_file)) {
-          read.delim(metadata_path)
+          step_time("read metadata", read.delim(metadata_path))
         } else {
           NULL
         }
@@ -392,7 +430,7 @@ server <- function(input, output, session) {
     VAM_data <- tryCatch(
       {
         if (!is.null(vam_file_path) && file.exists(vam_file_path)) {
-          read.delim(vam_file_path)
+          step_time("read VAM table", read.delim(vam_file_path))
         } else {
           if (!is.null(vam_file_path)) {
             # Path was configured but file is missing — surface this as a warning
@@ -427,8 +465,14 @@ server <- function(input, output, session) {
     
     
     print(paste("Loaded",sidebar_inputs$data_level(),"from dataset:", sidebar_inputs$study()))  
-    showNotification(paste("Loading data for study:", sidebar_inputs$study(), 
+    showNotification(paste("Loading data for study:", sidebar_inputs$study(),
                            "and data level:", sidebar_inputs$data_level()), type = "message")
+
+    cat(sprintf("[load-timing] %-22s %6.2fs  (study=%s level=%s)\n",
+                "TOTAL load handler",
+                as.numeric(difftime(Sys.time(), .load_t0, units = "secs")),
+                sidebar_inputs$study(), sidebar_inputs$data_level()),
+        file = stderr())
 
     })
   
@@ -498,25 +542,12 @@ server <- function(input, output, session) {
   
   
   
-  # Update default assay of the seurat object
-  observe({
-    obj <- seurat_obj()
-    
-    # Ensure the object is not NULL
-    if (!is.null(obj)) {
-      # Change the default assay based on input
-      if (sidebar_inputs$feature_type() == "Genes") {
-        DefaultAssay(obj) <- "RNA"
-      } else if (sidebar_inputs$feature_type() == "Pathways") {
-        DefaultAssay(obj) <- "VAMcdf"
-      }
-      
-      # Update the reactiveVal or reactive expression with the modified object
-      seurat_obj(obj)
-    }
-  })
-  
-  
+  # NOTE: DefaultAssay is now set per-render (in the FeaturePlot/expression
+  # reactives) instead of mutating the shared seurat_obj reactiveVal here.
+  # The previous observe() deep-copied the entire (multi-GB) Seurat object on
+  # every feature_type change and wrote it back into the reactiveVal it read
+  # from, re-invalidating all downstream plots/tables.
+
   # ------------ UMAP of the full dataset ---------------
   full_umap <- reactive({
     req(seurat_obj())
@@ -777,11 +808,16 @@ server <- function(input, output, session) {
   featureplot_plot_gene <- reactive({
     if (!is.null(gene_queried())) {
       selected_genes <- gene_queried()
-      
+
+      # Set the assay locally (FeaturePlot reads DefaultAssay and has no assay arg).
+      # Done per-render instead of mutating the shared seurat_obj reactiveVal.
+      obj <- seurat_obj()
+      DefaultAssay(obj) <- "RNA"
+
       if(length(selected_genes) == 2) {
         tryCatch({
           FeaturePlot(
-            object = seurat_obj(),
+            object = obj,
             features = selected_genes,
             # cols = c("blue", "red"),
             blend = TRUE,
@@ -793,7 +829,7 @@ server <- function(input, output, session) {
       } else {
         tryCatch({
           FeaturePlot(
-            object = seurat_obj(),
+            object = obj,
             features = selected_genes,
             pt.size = 0.3
           )
@@ -803,16 +839,20 @@ server <- function(input, output, session) {
       }
     }
   })
-  
-  
+
+
   featureplot_plot_pathway <- reactive({
     if (!is.null(pathway_queried())) {
       selected_pathways <- pathway_queried()
-      
+
+      # Set the assay locally (FeaturePlot reads DefaultAssay and has no assay arg).
+      obj <- seurat_obj()
+      DefaultAssay(obj) <- "VAMcdf"
+
       if(length(selected_pathways) == 2) {
         tryCatch({
           FeaturePlot(
-            object = seurat_obj(),
+            object = obj,
             features = selected_pathways,
             # cols = c("blue", "red"),
             blend = TRUE,
@@ -824,7 +864,7 @@ server <- function(input, output, session) {
       } else {
         tryCatch({
           FeaturePlot(
-            object = seurat_obj(),
+            object = obj,
             features = selected_pathways,
             pt.size = 0.3
           )
@@ -1038,7 +1078,7 @@ server <- function(input, output, session) {
   
   output$marker_tbl <- renderDT({
     DEGs_df_show()
-  })
+  }, server = TRUE)
   
   output$DEGs_table_ui <- renderUI({
     if (!is.null(DEGs_df_show())) {
@@ -1133,7 +1173,7 @@ server <- function(input, output, session) {
   
   output$meta_table <- renderDT({
     meta_df()
-  })
+  }, server = TRUE)
   
   output$meta_data_msg <- renderText({
     "Metadata not available for the selected dataset."
