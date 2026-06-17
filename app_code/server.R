@@ -384,8 +384,8 @@ server <- function(input, output, session) {
     # error silently kill the reactive chain.
     loaded <- tryCatch({
       list(
-        seurat = step_time("readRDS seurat", readRDS(seurat_path)),
-        gene_list = step_time("readRDS gene_list", readRDS(gene_list_path))
+        seurat = step_time("read seurat", read_object(seurat_path)),
+        gene_list = step_time("read gene_list", read_object(gene_list_path))
       )
     }, error = function(e) {
       cat("Error reading data files:", conditionMessage(e), "\n", file = stderr())
@@ -806,7 +806,7 @@ server <- function(input, output, session) {
 
   
   featureplot_plot_gene <- reactive({
-    if (!is.null(gene_queried())) {
+    if (!is.null(gene_queried()) && !is.null(seurat_obj())) {
       selected_genes <- gene_queried()
 
       # Set the assay locally (FeaturePlot reads DefaultAssay and has no assay arg).
@@ -842,7 +842,7 @@ server <- function(input, output, session) {
 
 
   featureplot_plot_pathway <- reactive({
-    if (!is.null(pathway_queried())) {
+    if (!is.null(pathway_queried()) && !is.null(seurat_obj())) {
       selected_pathways <- pathway_queried()
 
       # Set the assay locally (FeaturePlot reads DefaultAssay and has no assay arg).
@@ -1137,28 +1137,32 @@ server <- function(input, output, session) {
     updateAwesomeRadio(session,"feature_type", selected = feature_type_selected)
     
     
-    input_id <- if (feature_type_selected == "Genes") "explore_sidebar_module-gene_select" else "explore_sidebar_module-pathway_select"
+    # The DEG/VAM table's `gene` column already holds the *value* used by the
+    # selectors — a gene symbol for Genes, and the full "HALLMARK-..." id for
+    # Pathways (pathway_list values are the HALLMARK- ids; the names are just
+    # display labels with the prefix stripped). So in both cases the selected
+    # value is the cell value verbatim.
+    selected_value <- as.character(new_gene_queried())
+
     if (feature_type_selected == "Genes") {
       choices <- gene_list_obj()
-      selected_value <- as.character(new_gene_queried())
+      if (is.null(choices)) choices <- character(0)
+      # gene_select is a server-side selectizeInput
+      updateSelectizeInput(session,
+                           "explore_sidebar_module-gene_select",
+                           selected = selected_value,
+                           choices = choices,
+                           server = TRUE)
     } else {
       choices <- pathway_list()
-      selected_name <- as.character(new_gene_queried())
-      selected_value <- choices[names(choices) == selected_name]
+      if (is.null(choices)) choices <- character(0)
+      # pathway_select is a plain selectInput (updated with updateSelectInput)
+      updateSelectInput(session,
+                        "explore_sidebar_module-pathway_select",
+                        selected = selected_value,
+                        choices = choices)
     }
-    
-    if (is.null(choices)) {
-      choices <- character(0)
-    }
-    
-    updateSelectizeInput(session,
-                         # "gene_select",
-                         input_id,
-                         selected = selected_value,
-                         choices = choices,
-                         server = TRUE
-    )
-    
+
 })
   
 
