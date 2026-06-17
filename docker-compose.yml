@@ -39,10 +39,10 @@ services:
       - shiny-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3838/atlas/"]
-      interval: 30s
+      interval: 15s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 5
+      start_period: 180s
     logging:
       driver: "json-file"
       options:
@@ -64,10 +64,10 @@ services:
       - shiny-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3838/atlas/"]
-      interval: 30s
+      interval: 15s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 5
+      start_period: 180s
     logging:
       driver: "json-file"
       options:
@@ -89,10 +89,10 @@ services:
       - shiny-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3838/atlas/"]
-      interval: 30s
+      interval: 15s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 5
+      start_period: 180s
     logging:
       driver: "json-file"
       options:
