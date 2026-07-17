@@ -18,6 +18,8 @@ source("setup.R")
 source("modules/dataset_gallery_module.R")
 source("modules/explore_sidebar_module.R")
 source("modules/spatial_unit.R")
+source("modules/cellchat_helpers.R")
+source("modules/cellchat_explorer_module.R")
 
 options(shiny.trace = FALSE)
 
@@ -82,7 +84,19 @@ server <- function(input, output, session) {
 
   options(shiny.trace = FALSE, shiny.fullstacktrace = FALSE, shiny.sanitize.errors = TRUE)
 
-  selected_study_from_gallery <- dataset_gallery_server("gallery_module")
+  selected_study_from_gallery <- dataset_gallery_server(
+    "gallery_module",
+    cellchat_dataset_ids = cellchat_dataset_ids
+  )
+
+  cellchat_explorer_server(
+    "cellchat_module",
+    dataset_configs = lapply(
+      dataset_files[cellchat_dataset_ids],
+      function(files) files$cellchat
+    ),
+    gallery_selection = selected_study_from_gallery
+  )
 
   sidebar_inputs <- explore_sidebar_server("explore_sidebar_module", 
                                            selected_study_from_gallery = selected_study_from_gallery)
@@ -101,6 +115,10 @@ server <- function(input, output, session) {
         nav_select("nav_page", selected = "spatial")
         # Update the study selector on the spatial page
         updateSelectInput(session, "spatial_study_selector", selected = study_info$id)
+      } else if (study_info$view == "cellchat") {
+        # The CellChat module receives the same selection and updates its own
+        # namespaced study input before its visualizations render.
+        nav_select("nav_page", selected = "cellchat")
       }
     } else {
       # Fallback for old behavior or unexpected data

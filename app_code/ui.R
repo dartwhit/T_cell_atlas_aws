@@ -28,6 +28,8 @@ source("setup.R")
 source("modules/spatial_unit.R")
 source("modules/dataset_gallery_module.R")
 source("modules/explore_sidebar_module.R")
+source("modules/cellchat_helpers.R")
+source("modules/cellchat_explorer_module.R")
 
 
 # Feature plot of queried genes
@@ -191,6 +193,14 @@ ui <- page_navbar(
             ),
   ),
   
+  nav_panel(
+    "CellChat",
+    value = "cellchat",
+    bslib::page_fluid(
+      cellchat_explorer_UI("cellchat_module", choices = cellchat_dataset_choices)
+    )
+  ),
+
   nav_panel("Spatial data explorer",
     value = "spatial",
     bslib::page_fluid(
