@@ -40,6 +40,17 @@ read_object <- function(path) {
   readRDS(path)
 }
 
+cellchat_config_complete <- function(config) {
+  if (is.null(config) || !is.list(config)) return(FALSE)
+  merged <- config$merged %||% ""
+  conditions <- config$conditions
+  is.character(merged) && length(merged) == 1 && nzchar(merged) &&
+    is.list(conditions) && length(conditions) > 0 &&
+    all(vapply(conditions, function(path) {
+      is.character(path) && length(path) == 1 && nzchar(path)
+    }, logical(1)))
+}
+
 cat("Working directory is:", getwd(), "\n", file = stderr())
 
 # Default comparison metadata for datasets without explicit configuration
@@ -110,3 +121,13 @@ scrna_dataset_choices <- setNames(
   dataset_meta$id[dataset_meta$has_scrna],
   dataset_meta$name[dataset_meta$has_scrna]
 )
+
+# Studies with a complete, precomputed CellChat comparison. The CellChat tab
+# and gallery entry points use this list so unavailable datasets are never
+# presented as selectable CellChat studies.
+cellchat_dataset_ids <- names(dataset_files)[vapply(
+  dataset_files,
+  function(files) cellchat_config_complete(files$cellchat),
+  logical(1)
+)]
+cellchat_dataset_choices <- dataset_choices[dataset_choices %in% cellchat_dataset_ids]

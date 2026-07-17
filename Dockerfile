@@ -20,7 +20,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 RUN pip install pandas
 
 # Install R packages
-RUN R -e 'install.packages(c("plotly", "igraph", "Seurat", "Matrix", "SeuratObject", "DT", "ggplot2", "dplyr", "stringr", "shiny", "shinymanager", "shinyWidgets", "bslib", "shinycssloaders", "bsicons", "VAM", "periscope2", "shinyjs", "tidyr", "DBI", "RSQLite", "jpeg", "png", "qs2"))'
+RUN R -e 'install.packages(c("plotly", "igraph", "Seurat", "Matrix", "SeuratObject", "DT", "ggplot2", "dplyr", "stringr", "shiny", "shinymanager", "shinyWidgets", "bslib", "shinycssloaders", "bsicons", "VAM", "periscope2", "shinyjs", "tidyr", "DBI", "RSQLite", "jpeg", "png", "qs2", "BiocManager", "remotes"))' && \
+    R -e 'BiocManager::install("ComplexHeatmap", ask = FALSE, update = FALSE)' && \
+    R -e 'remotes::install_github("jinworks/CellChat", dependencies = TRUE, upgrade = "never")'
 
 # Copy Shiny app code
 COPY ./app_code/ /srv/shiny-server/atlas/

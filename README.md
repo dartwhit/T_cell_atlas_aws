@@ -71,6 +71,24 @@ The app prints its working directory to stderr on startup, so you can confirm it
 
 > **Note:** `LOCAL_DEV` only disables authentication for local development. When unset (the default in Docker / production), the UI is wrapped with `shinymanager` and the SQLite credential database is required as normal.
 
+### CellChat data
+
+The CellChat tab is enabled only for studies with a complete CellChat entry in
+[app_code/config/dataset_details.json](app_code/config/dataset_details.json).
+The initial Tabib integration expects these precomputed, stripped CellChat
+objects in the study data directory:
+
+```
+app_code/data/tabib/cellchat/merged.rds
+app_code/data/tabib/cellchat/HC.rds
+app_code/data/tabib/cellchat/SSc.rds
+```
+
+For deployment, copy the same directory structure to the mounted EC2 data
+volume under `tabib/cellchat/`. These objects are data assets and must not be
+committed to the repository. The CellChat tab displays a load error if one is
+missing or invalid.
+
 ### Pull Request Deployment
 
 All pull requests to the `main` branch are **automatically deployed to EC2** for manual testing. This allows you to test the full UI and backend functionality in a real environment before merging.

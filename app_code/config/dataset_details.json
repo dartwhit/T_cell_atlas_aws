@@ -45,6 +45,13 @@
     },
     "files": {
       "meta": "Tabib_metadata.txt",
+      "cellchat": {
+        "merged": "cellchat/merged.rds",
+        "conditions": {
+          "HC": "cellchat/HC.rds",
+          "SSc": "cellchat/SSc.rds"
+        }
+      },
       "full": {
         "seurat": "Tabib_full_filtered_VAM.rds",
         "gene_list": "Tabib_gene_list.rds",

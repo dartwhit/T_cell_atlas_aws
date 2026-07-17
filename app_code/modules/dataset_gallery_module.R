@@ -20,7 +20,7 @@ dataset_gallery_UI <- function(id) {
 }
 
 # ---------- MODULE SERVER ----------
-dataset_gallery_server <- function(id) {
+dataset_gallery_server <- function(id, cellchat_dataset_ids = character()) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
 
@@ -79,6 +79,13 @@ dataset_gallery_server <- function(id) {
           action_buttons <- list(actionButton(ns(paste0("explore_spatial_", row$id)), "View Spatial"))
         }
 
+        if (row$id %in% cellchat_dataset_ids) {
+          action_buttons <- append(
+            action_buttons,
+            list(actionButton(ns(paste0("explore_cellchat_", row$id)), "View CellChat"))
+          )
+        }
+
         tags$div(
           class = "dataset-card",
           tags$img(src = row$image, class = "dataset-img", alt = row$name),
@@ -103,6 +110,13 @@ dataset_gallery_server <- function(id) {
       # Observer for Spatial button
       observeEvent(input[[paste0("explore_spatial_", id)]], {
         selected_study(list(id = id, view = "spatial"))
+      })
+    })
+
+    # CellChat buttons are generated only for studies with complete CellChat data.
+    lapply(cellchat_dataset_ids, function(id) {
+      observeEvent(input[[paste0("explore_cellchat_", id)]], {
+        selected_study(list(id = id, view = "cellchat"))
       })
     })
 
