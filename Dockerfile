@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     libglpk-dev \
     libjpeg-dev \
     libpng-dev \
+    libwebpmux3 \
     libuv1 \
     python3 python3-pip python3-venv \
     vim nano \
@@ -23,7 +24,7 @@ RUN pip install pandas
 RUN R -e 'install.packages(c("plotly", "igraph", "Seurat", "Matrix", "SeuratObject", "DT", "ggplot2", "dplyr", "stringr", "shiny", "shinymanager", "shinyWidgets", "bslib", "shinycssloaders", "bsicons", "VAM", "periscope2", "shinyjs", "tidyr", "DBI", "RSQLite", "jpeg", "png", "qs2", "BiocManager", "remotes"))' && \
     R -e 'BiocManager::install(c("ComplexHeatmap", "BiocNeighbors", "Biobase"), ask = FALSE, update = FALSE)' && \
     R -e 'remotes::install_github("jinworks/CellChat", dependencies = TRUE, upgrade = "never", force = TRUE)' && \
-    R -e 'stopifnot(requireNamespace("CellChat", quietly = TRUE))'
+    R -e 'stopifnot(requireNamespace("CellChat", quietly = TRUE)); library(ragg)'
 
 # Copy Shiny app code
 COPY ./app_code/ /srv/shiny-server/atlas/
