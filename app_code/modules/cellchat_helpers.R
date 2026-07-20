@@ -251,10 +251,38 @@ cellchat_plot_heatmap_diff <- function(merged, measure = c("count", "weight")) {
   invisible(NULL)
 }
 
+# netVisual_heatmap() leaves its panel size unset so it fills the device, but
+# netAnalysis_signalingRole_heatmap() hard-codes 10 x 8 cm. Side by side on the
+# same tab that reads as a bug: the role heatmap shrinks to a block in the
+# corner and squeezes every pathway label into 8 cm. Size it to the device
+# instead, and let the module ask how tall a canvas the row count needs.
+CELLCHAT_ROLE_HEATMAP_ROW_PX <- 14
+CELLCHAT_ROLE_HEATMAP_CHROME_PX <- 200
+CELLCHAT_ROLE_HEATMAP_MIN_PX <- 460
+CELLCHAT_ROLE_HEATMAP_MAX_PX <- 2400
+
+cellchat_role_heatmap_rows <- function(obj, signaling = NULL) {
+  pathways <- cellchat_pathways(obj)
+  selection <- cellchat_selection_or_null(signaling)
+  if (!is.null(selection)) pathways <- intersect(pathways, selection)
+  length(pathways)
+}
+
+cellchat_role_heatmap_height <- function(obj, signaling = NULL) {
+  rows <- max(cellchat_role_heatmap_rows(obj, signaling), 1)
+  height <- CELLCHAT_ROLE_HEATMAP_CHROME_PX + rows * CELLCHAT_ROLE_HEATMAP_ROW_PX
+  min(max(height, CELLCHAT_ROLE_HEATMAP_MIN_PX), CELLCHAT_ROLE_HEATMAP_MAX_PX)
+}
+
 cellchat_plot_signaling_role_heatmap <- function(obj, pattern = c("outgoing", "incoming", "all"),
                                                   signaling = NULL) {
+  # par("din") is the open device in inches; reserve room for the legend and
+  # the column bar plot / rotated cell-type labels that sit outside the panel.
+  device_cm <- graphics::par("din") * 2.54
   heatmap <- CellChat::netAnalysis_signalingRole_heatmap(
-    obj, pattern = match.arg(pattern), signaling = cellchat_selection_or_null(signaling)
+    obj, pattern = match.arg(pattern), signaling = cellchat_selection_or_null(signaling),
+    width = max(device_cm[[1]] - 9, 8),
+    height = max(device_cm[[2]] - 6, 6)
   )
   ComplexHeatmap::draw(heatmap)
   invisible(NULL)

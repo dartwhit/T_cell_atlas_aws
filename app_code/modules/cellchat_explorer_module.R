@@ -62,7 +62,9 @@ cellchat_explorer_UI <- function(id, choices) {
             selected = "outgoing", inline = TRUE
           ),
           plotOutput(ns("heatmap_diff"), height = "460px"),
-          plotOutput(ns("heatmap_role"), height = "560px")
+          # Height depends on how many pathways end up as rows, so the plot
+          # output is built server-side rather than fixed here.
+          uiOutput(ns("heatmap_role_ui"))
         ),
         nav_panel(
           "L-R bubble",
@@ -199,6 +201,22 @@ cellchat_explorer_server <- function(id, dataset_configs, gallery_selection = NU
         cellchat_plot_heatmap_diff(data$merged, input$measure)
       })
     })
+    role_heatmap_height <- reactive({
+      data <- cellchat_data()
+      if (!is.null(data$error)) return(CELLCHAT_ROLE_HEATMAP_MIN_PX)
+      condition <- input$condition
+      if (is.null(condition) || !condition %in% names(data$conditions)) {
+        return(CELLCHAT_ROLE_HEATMAP_MIN_PX)
+      }
+      object <- data$conditions[[condition]]
+      cellchat_role_heatmap_height(object, input$pathways)
+    })
+
+    output$heatmap_role_ui <- renderUI({
+      plotOutput(session$ns("heatmap_role"),
+                 height = paste0(role_heatmap_height(), "px"))
+    })
+
     output$heatmap_role <- renderPlot({
       draw_plot(function(data) {
         object <- selected_condition_object()
