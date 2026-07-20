@@ -46,8 +46,8 @@ testServer(
     a_source <- celltypes[[1]]
     a_target <- celltypes[[min(2, length(celltypes))]]
     a_pathway <- if (length(pathways) > 0) pathways[[1]] else NULL
-    a_ligand <- substr(baseline$ligand[[1]], 1, 3)
-    a_receptor <- substr(baseline$receptor[[1]], 1, 3)
+    a_ligand  <- if (nrow(baseline) > 0) substr(baseline$ligand[[1]],   1, 3) else NULL
+    a_receptor <- if (nrow(baseline) > 0) substr(baseline$receptor[[1]], 1, 3) else NULL
 
     rows_now <- function() nrow(filtered_table())
     differs <- function(n) !identical(n, nrow(baseline))
@@ -83,7 +83,7 @@ testServer(
                        sprintf("%d -> %d rows (contains '%s')", nrow(baseline), rows_now(), a_receptor))
     reset()
 
-    median_prob <- stats::median(baseline$prob, na.rm = TRUE)
+    median_prob <- if (nrow(baseline) > 0) stats::median(baseline$prob, na.rm = TRUE) else 0  # 0 = no-op filter when baseline is empty
     session$setInputs(prob_min = median_prob)
     qa_expect_reactive("table reacts to `prob_min`", differs(rows_now()),
                        sprintf("%d -> %d rows (prob >= %.3g)", nrow(baseline), rows_now(), median_prob))
