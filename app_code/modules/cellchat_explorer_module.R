@@ -16,8 +16,12 @@ cellchat_explorer_UI <- function(id, choices) {
         selected = "weight", inline = TRUE
       ),
       selectInput(ns("condition"), "Condition for drill-down", choices = NULL),
+      helpText("Applies to the per-condition heatmap and signaling-role scatter."),
       tags$hr(),
       tags$strong("Filters"),
+      helpText("Applies to the differential circle plot, L-R bubble, rankNet, ",
+               "role heatmap/scatter, and the communication table. The ",
+               "Comparison overview always shows the full aggregated network."),
       selectizeInput(
         ns("sources"), "Source cell type(s)", choices = NULL, multiple = TRUE,
         options = list(placeholder = "All")
@@ -33,7 +37,9 @@ cellchat_explorer_UI <- function(id, choices) {
       textInput(ns("ligand"), "Ligand contains", ""),
       textInput(ns("receptor"), "Receptor contains", ""),
       sliderInput(ns("prob_min"), "Minimum probability", 0, 1, 0, step = 0.01),
-      sliderInput(ns("pval_max"), "Maximum p-value", 0, 1, 1, step = 0.01)
+      helpText("Communication table only."),
+      sliderInput(ns("pval_max"), "Maximum p-value", 0, 1, 1, step = 0.01),
+      helpText("L-R bubble and communication table only.")
     ),
     tagList(
       uiOutput(ns("status")),
@@ -71,10 +77,14 @@ cellchat_explorer_UI <- function(id, choices) {
         ),
         nav_panel(
           "Communication table",
-          radioButtons(
-            ns("level"), "Resolution",
-            choices = c("Ligand-receptor" = "LR", "Pathway" = "pathway"),
-            selected = "LR", inline = TRUE
+          layout_columns(
+            col_widths = c(6, 6),
+            radioButtons(
+              ns("level"), "Resolution",
+              choices = c("Ligand-receptor" = "LR", "Pathway" = "pathway"),
+              selected = "LR", inline = TRUE
+            ),
+            selectInput(ns("table_condition"), "Condition", choices = NULL)
           ),
           downloadButton(ns("download"), "Download filtered CSV"),
           br(), br(),
@@ -119,6 +129,7 @@ cellchat_explorer_server <- function(id, dataset_configs, gallery_selection = NU
       data <- cellchat_data()
       if (!is.null(data$error)) {
         updateSelectInput(session, "condition", choices = character())
+        updateSelectInput(session, "table_condition", choices = character())
         updateSelectizeInput(session, "sources", choices = character(), selected = character())
         updateSelectizeInput(session, "targets", choices = character(), selected = character())
         updateSelectizeInput(session, "pathways", choices = character(), selected = character())
@@ -128,7 +139,12 @@ cellchat_explorer_server <- function(id, dataset_configs, gallery_selection = NU
       conditions <- names(data$conditions)
       updateSelectInput(
         session, "condition", choices = conditions,
-        selected = conditions[[1]] %||% NULL
+        selected = if (length(conditions) > 0) conditions[[1]] else NULL
+      )
+      updateSelectInput(
+        session, "table_condition",
+        choices = c(stats::setNames(CELLCHAT_ALL_CONDITIONS, "All conditions"), conditions),
+        selected = CELLCHAT_ALL_CONDITIONS
       )
       celltypes <- cellchat_celltypes(data$merged)
       pathways <- cellchat_pathways(data$merged)
@@ -152,6 +168,10 @@ cellchat_explorer_server <- function(id, dataset_configs, gallery_selection = NU
       tryCatch(
         plot_function(data),
         error = function(error) {
+          # req() signals a shiny.silent.error, which inherits from "error".
+          # Let it through so an unset input leaves the plot blank instead of
+          # rendering an error panel with an empty message.
+          if (inherits(error, "shiny.silent.error")) stop(error)
           cellchat_draw_plot_error(paste("CellChat plot could not be generated:",
                                          conditionMessage(error)))
         }
@@ -165,7 +185,8 @@ cellchat_explorer_server <- function(id, dataset_configs, gallery_selection = NU
     })
     output$diff <- renderPlot({
       draw_plot(function(data) {
-        cellchat_plot_diff_interaction(data$merged, input$measure)
+        cellchat_plot_diff_interaction(data$merged, input$measure,
+                                       input$sources, input$targets)
       })
     })
     output$compare <- renderPlot({
@@ -187,12 +208,16 @@ cellchat_explorer_server <- function(id, dataset_configs, gallery_selection = NU
     })
     output$bubble <- renderPlot({
       draw_plot(function(data) {
-        cellchat_plot_bubble(data$merged, input$sources, input$targets, input$pathways)
+        cellchat_plot_bubble(data$merged, input$sources, input$targets, input$pathways,
+                             pval_max = input$pval_max)
       })
     })
     output$ranknet <- renderPlot({
       draw_plot(function(data) {
-        cellchat_plot_ranknet(data$merged, input$rank_stacked)
+        cellchat_plot_ranknet(data$merged, input$rank_stacked,
+                              measure = input$measure,
+                              signaling = input$pathways,
+                              sources = input$sources, targets = input$targets)
       })
     })
     output$role_scatter <- renderPlot({
@@ -218,7 +243,8 @@ cellchat_explorer_server <- function(id, dataset_configs, gallery_selection = NU
         receptor = input$receptor,
         pathway = input$pathways,
         prob_min = input$prob_min,
-        pval_max = input$pval_max
+        pval_max = input$pval_max,
+        condition = input$table_condition
       )
     })
 

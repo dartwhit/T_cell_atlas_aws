@@ -160,9 +160,11 @@ cellchat_contains_pattern <- function(values, pattern) {
   )
 }
 
+CELLCHAT_ALL_CONDITIONS <- "__all__"
+
 cellchat_apply_comm_filters <- function(data, sources = NULL, targets = NULL,
                                         ligand = NULL, receptor = NULL, pathway = NULL,
-                                        prob_min = 0, pval_max = 1) {
+                                        prob_min = 0, pval_max = 1, condition = NULL) {
   if (!is.data.frame(data) || nrow(data) == 0) return(tibble::as_tibble(data))
   out <- data
   matches_selection <- function(values, selected) {
@@ -171,6 +173,13 @@ cellchat_apply_comm_filters <- function(data, sources = NULL, targets = NULL,
     } else {
       values %in% selected
     }
+  }
+
+  # subsetCommunication() on a merged object returns every condition stacked in
+  # one frame, tagged by `dataset`. Scope to one condition unless asked for all.
+  if (!is.null(condition) && length(condition) == 1 && nzchar(condition) &&
+      !identical(condition, CELLCHAT_ALL_CONDITIONS) && "dataset" %in% names(out)) {
+    out <- out[out$dataset %in% condition, , drop = FALSE]
   }
 
   out <- out[matches_selection(out$source, sources), , drop = FALSE]
@@ -187,6 +196,17 @@ cellchat_apply_comm_filters <- function(data, sources = NULL, targets = NULL,
 
 cellchat_selection_or_null <- function(value) {
   if (is.null(value) || length(value) == 0 || all(!nzchar(value))) NULL else value
+}
+
+# CellChat's plotting functions take `thresh` and keep interactions with
+# `pval < thresh`, while the sidebar slider and the communication table use an
+# inclusive `pval <= pval_max`. Nudge the cutoff up by a hair so both views
+# agree on which interactions sit exactly on the boundary.
+cellchat_pval_threshold <- function(pval_max, default = 0.05) {
+  if (is.null(pval_max) || length(pval_max) != 1 || !is.finite(pval_max)) {
+    return(default)
+  }
+  pval_max + 1e-9
 }
 
 cellchat_plot_circle_comparison <- function(merged, measure = c("weight", "count")) {
@@ -206,9 +226,12 @@ cellchat_plot_circle_comparison <- function(merged, measure = c("weight", "count
   invisible(NULL)
 }
 
-cellchat_plot_diff_interaction <- function(merged, measure = c("count", "weight")) {
+cellchat_plot_diff_interaction <- function(merged, measure = c("count", "weight"),
+                                           sources = NULL, targets = NULL) {
   CellChat::netVisual_diffInteraction(
-    merged, weight.scale = TRUE, measure = match.arg(measure)
+    merged, weight.scale = TRUE, measure = match.arg(measure),
+    sources.use = cellchat_selection_or_null(sources),
+    targets.use = cellchat_selection_or_null(targets)
   )
   invisible(NULL)
 }
@@ -237,12 +260,14 @@ cellchat_plot_signaling_role_heatmap <- function(obj, pattern = c("outgoing", "i
   invisible(NULL)
 }
 
-cellchat_plot_bubble <- function(merged, sources = NULL, targets = NULL, signaling = NULL) {
+cellchat_plot_bubble <- function(merged, sources = NULL, targets = NULL, signaling = NULL,
+                                 pval_max = 0.05) {
   plot <- CellChat::netVisual_bubble(
     merged,
     sources.use = cellchat_selection_or_null(sources),
     targets.use = cellchat_selection_or_null(targets),
     signaling = cellchat_selection_or_null(signaling),
+    thresh = cellchat_pval_threshold(pval_max),
     comparison = seq_along(cellchat_merged_datasets(merged)),
     angle.x = 45
   )
@@ -250,10 +275,19 @@ cellchat_plot_bubble <- function(merged, sources = NULL, targets = NULL, signali
   invisible(NULL)
 }
 
-cellchat_plot_ranknet <- function(merged, stacked = TRUE) {
+# No p-value argument here on purpose: rankNet() ranks the aggregated pathway
+# networks in @netP, and its `thresh` provably leaves the result untouched on
+# this data (identical output from thresh = 1 down to 0.001). Passing it would
+# put a slider on screen that silently does nothing.
+cellchat_plot_ranknet <- function(merged, stacked = TRUE, measure = c("weight", "count"),
+                                  signaling = NULL, sources = NULL, targets = NULL) {
   plot <- CellChat::rankNet(
     merged, mode = "comparison",
     comparison = seq_along(cellchat_merged_datasets(merged)),
+    measure = match.arg(measure),
+    signaling = cellchat_selection_or_null(signaling),
+    sources.use = cellchat_selection_or_null(sources),
+    targets.use = cellchat_selection_or_null(targets),
     stacked = stacked, do.stat = TRUE
   )
   print(plot)

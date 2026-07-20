@@ -1,12 +1,15 @@
-# CellChat explorer — QA harness and findings
+# CellChat explorer — QA harness
 
 Functional QA of the CellChat tab
 ([cellchat_explorer_module.R](../../app_code/modules/cellchat_explorer_module.R),
-[cellchat_helpers.R](../../app_code/modules/cellchat_helpers.R)), added on
-`cellchat-integration` and not previously exercised end-to-end.
+[cellchat_helpers.R](../../app_code/modules/cellchat_helpers.R)), run against the
+real `tabib` objects (25 cell types, 122 pathways, HC + SSc, 32,860 L-R rows).
 
-Run against the real `tabib` objects (25 cell types, 122 pathways, HC + SSc,
-32,860 L-R rows). **No app code was changed** — this is a report.
+The first pass found nine controls that did not reach the output they appeared
+to drive; those are now fixed. The harness stays here so the wiring can be
+re-checked whenever the module or the pinned CellChat version changes.
+
+**Current state: 39 PASS, 3 UNWIRED (all documented below as deliberate), 0 FAIL.**
 
 ## Running
 
@@ -18,104 +21,79 @@ Rscript ../tests/cellchat/test_wiring.R
 Rscript ../tests/cellchat/test_plots.R
 ```
 
-Needs `CellChat`, `ComplexHeatmap`, `shiny`, `Seurat` — all already present
-locally. No Docker, no browser driver: wiring uses `shiny::testServer()`, plots
+Needs `CellChat`, `ComplexHeatmap`, `shiny`, `Seurat` — all already in the app
+image. No Docker and no browser driver: wiring uses `shiny::testServer()`, plots
 use `grDevices::png()`. Set `QA_PLOT_DIR` to keep the rendered PNGs.
 
 Each line prints `PASS`, `UNWIRED`, or `FAIL`:
 
 - **PASS** — the control drives the output, as the UI implies.
-- **UNWIRED** — the control demonstrably does *not* reach the output. A finding,
-  not a harness failure; does not affect the exit code.
+- **UNWIRED** — the control does *not* reach the output. Only three remain, each
+  a deliberate, documented limitation; does not affect the exit code.
 - **FAIL** — the harness itself could not complete the check. Exit code 1.
 
 `test_plots.R` decides `PASS`/`UNWIRED` by rendering two variants and comparing
 md5 hashes: a control that really drives a plot produces a different image; one
-that never reaches the CellChat call produces a byte-identical image. Where the
-wrapper has no parameter at all, the check reads the function signature instead.
+that never reaches the CellChat call produces a byte-identical image. This is
+what caught the original bugs, and what keeps them from coming back.
 
-## Result: 27 PASS, 9 UNWIRED, 0 FAIL
+## What each control drives
 
-**Everything renders.** All 12 outputs produce real plots/tables against real
-data — no crashes, no blank panels, no missing data files. The problems are all
-about *which controls reach which outputs*, plus one cosmetic error-handling bug.
+| Control | Drives |
+|---|---|
+| `study` | everything |
+| `measure` (Strength/Count) | circle, diffInteraction, compareInteractions, diff heatmap, **rankNet** |
+| `condition` | role heatmap, role scatter |
+| `table_condition` | communication table, CSV download |
+| `role_pattern` | role heatmap |
+| `rank_stacked` | rankNet |
+| `sources` / `targets` | **diffInteraction**, bubble, **rankNet**, table |
+| `pathways` | role heatmap, role scatter, bubble, **rankNet**, table |
+| `ligand` / `receptor` | table |
+| `prob_min` | table |
+| `pval_max` | **bubble**, table |
+| `level` | table, download filename |
 
-### What works
+Bold entries were wired up in this pass.
 
-| Control | Drives | Verified by |
-|---|---|---|
-| `study` | all outputs | load test — HC + SSc objects, 25 cell types, 122 pathways |
-| `measure` | circle, diffInteraction, compareInteractions, diff heatmap | hash sweep |
-| `condition` | role heatmap, role scatter | hash sweep (HC vs SSc differ) |
-| `role_pattern` | role heatmap | hash sweep (outgoing vs incoming differ) |
-| `rank_stacked` | rankNet | hash sweep |
-| `sources` / `targets` | bubble, table | hash sweep; 32860 → 393 rows |
-| `pathways` | role heatmap, role scatter, bubble, table | hash sweep; 32860 → 21 rows |
-| `ligand` / `receptor` | table | 32860 → 214 / 564 rows |
-| `prob_min` / `pval_max` | table | 32860 → 16430 / 32668 rows |
-| `level` | table, download filename | 32860 → 12970 rows |
-| download button | non-empty CSV of the filtered table | write/read round-trip |
+## Fixes applied
 
-### What does not work
+1. **`measure` reached rankNet.** `cellchat_plot_ranknet()` gained a `measure`
+   parameter; the Strength/Count toggle had been silently inert on that tab.
+2. **`pathways` and `sources`/`targets` reached rankNet** via `signaling=`,
+   `sources.use=` and `targets.use=`.
+3. **`pval_max` reached the L-R bubble** via `netVisual_bubble(thresh=)`. Added
+   `cellchat_pval_threshold()`, which nudges the cutoff by 1e-9 because CellChat
+   filters on `pval < thresh` while the table filters on `pval <= pval_max` —
+   without it the two views disagree on interactions sitting exactly on the
+   boundary.
+4. **The communication table can be scoped to one condition.** It reads from the
+   merged object, so it had always returned every condition stacked together
+   (HC 14,594 + SSc 18,266 rows) with no way to narrow it. The sidebar
+   `condition` control drives the per-condition *plots* and cannot take an "all"
+   value without breaking them, so the table got its own `table_condition`
+   selector in its tab, defaulting to "All conditions" — matching how `level`,
+   `role_pattern` and `rank_stacked` already live beside the output they affect.
+5. **`draw_plot()` no longer swallows `req()`.** Its `tryCatch(error=)` caught
+   `shiny.silent.error` (which inherits from `error`), so an unset input made the
+   Heatmaps and Signaling-roles tabs render `"CellChat plot could not be
+   generated:"` with an empty message on first load. Silent errors are now
+   re-raised; genuine errors are still drawn, and the harness checks both.
+6. **`sources`/`targets` reached the differential circle plot**, which does
+   support them. The sidebar now also states which outputs each block governs.
+7. **`conditions[[1]] %||% NULL` replaced with a length check.** On an empty
+   vector the subscript threw before `%||%` was ever reached.
 
-**1. `measure` (Strength/Count) is inert on the rankNet plot.**
-[helpers.R:253](../../app_code/modules/cellchat_helpers.R#L253) —
-`cellchat_plot_ranknet()` has no `measure` parameter, so `CellChat::rankNet()`
-is always called with its default. Toggling Strength/Count on the "Signaling
-roles / rankNet" tab changes nothing. Renders are byte-identical.
+## Remaining UNWIRED — deliberate
 
-**2. `pathways` is inert on the rankNet plot.**
-Same wrapper — no `signaling` parameter, though `rankNet()` accepts one. The
-sidebar pathway filter narrows the heatmaps, scatter, bubble and table, but
-rankNet keeps showing all 122 pathways.
-
-**3. `prob_min` / `pval_max` are inert on the L-R bubble plot.**
-[helpers.R:240](../../app_code/modules/cellchat_helpers.R#L240) —
-`cellchat_plot_bubble()` never passes `thresh=` to `netVisual_bubble()`. The two
-sliders sit under a heading that reads "Filters" but only affect the table.
-
-**4. `condition` does not filter the communication table.**
-[module.R:206-223](../../app_code/modules/cellchat_explorer_module.R#L206-L223) —
-`communication_table()` runs on `data$merged` and `filtered_table()` never reads
-`input$condition`. Measured: HC = 32,860 rows, SSc = 32,860 rows — identical.
-The table always carries both conditions, distinguished only by its `dataset`
-column, so each L-R pair appears twice and the control labelled "Condition for
-drill-down" cannot drill down. The downloaded CSV has the same problem.
-
-**5. `req()` inside `draw_plot()` renders a bogus error panel.**
-[module.R:152-158](../../app_code/modules/cellchat_explorer_module.R#L152-L158) —
-`draw_plot()` wraps the plot call in `tryCatch(error = ...)`. `req()` signals a
-`shiny.silent.error`, which *inherits from* `error`, so the `req()` calls at
-[module.R:184](../../app_code/modules/cellchat_explorer_module.R#L184) and
-[module.R:201](../../app_code/modules/cellchat_explorer_module.R#L201) get
-caught. Reproduced verbatim — the user sees:
-
-```
-CellChat plot could not be generated:
-```
-
-with an empty message, where the plot should simply stay blank. This fires on
-the Heatmaps and Signaling-roles tabs on first load, before `condition` is
-populated.
-
-**6. The whole "Filters" block is inert on the Comparison overview tab.**
-`cellchat_plot_circle_comparison()`, `cellchat_plot_diff_interaction()` and
-`cellchat_plot_compare_interactions()` all take only `(merged, measure)`. Source,
-target, pathway, ligand, receptor and both sliders cannot affect that tab at all.
-Arguably by design for an overview, but the sidebar gives no such hint.
-
-**7. Latent: `conditions[[1]] %||% NULL` is not a safe guard.**
-[module.R:131](../../app_code/modules/cellchat_explorer_module.R#L131) — on an
-empty vector, `conditions[[1]]` throws `subscript out of bounds` *before* `%||%`
-is ever reached (confirmed). `cellchat_config_complete()` makes this unreachable
-today, so it is a latent trap rather than a live bug.
-
-### Summary
-
-The sidebar's single "Filters" block implies the controls under it apply to
-everything on the right. In practice they apply fully only to the Communication
-table, partially to the bubble and heatmaps, and not at all to the Comparison
-overview or rankNet. The cheapest structural fix is to pass the missing
-arguments through the four wrappers (#1, #2, #3), scope the table by condition
-(#4), and either move per-tab controls next to their tab or label the sidebar
-block with what it governs.
+- **`prob_min` does not affect the L-R bubble.** `netVisual_bubble()` exposes
+  only a p-value threshold, no probability cutoff. It stays a table-only filter
+  and the sidebar says so.
+- **`pval_max` is not offered for rankNet.** `rankNet()` accepts `thresh`, but it
+  provably does nothing here — identical output from `thresh = 1` down to
+  `0.001`. Wiring it would put a slider on screen that changes nothing, so the
+  parameter is omitted. `test_plots.R` asserts the inertness, so if a future
+  CellChat starts honouring `thresh` the check fails and the slider can be added.
+- **The Comparison overview ignores the Filters block.** An aggregate circle plot
+  of every cell type and a total-interaction bar chart are that tab's purpose.
+  The differential plot beside them *does* now respect source/target.

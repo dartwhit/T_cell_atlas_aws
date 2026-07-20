@@ -73,25 +73,16 @@ sweep("diff heatmap reacts to `measure`",
       "hmdiff_count",  cellchat_plot_heatmap_diff(merged, "count"),
       "Heatmaps")
 
-# rankNet takes `measure` upstream but the wrapper never passes it, so the
-# sidebar toggle cannot reach this plot. Rendering is identical by construction;
-# the sweep proves the toggle is inert rather than merely unread.
 sweep("rankNet reacts to `measure`",
-      "ranknet_measure_a", cellchat_plot_ranknet(merged, TRUE),
-      "ranknet_measure_b", cellchat_plot_ranknet(merged, TRUE),
-      "Signaling roles tab — wrapper has no measure argument")
+      "ranknet_weight", cellchat_plot_ranknet(merged, TRUE, measure = "weight"),
+      "ranknet_count",  cellchat_plot_ranknet(merged, TRUE, measure = "count"),
+      "Signaling roles tab")
 
 # ---- `rank_stacked` ----------------------------------------------------------
 sweep("rankNet reacts to `rank_stacked`",
       "ranknet_stacked", cellchat_plot_ranknet(merged, TRUE),
       "ranknet_unstacked", cellchat_plot_ranknet(merged, FALSE),
       "Signaling roles tab")
-
-# rankNet ignores the sidebar pathway filter: the wrapper has no `signaling`
-# argument, so there is nothing to vary. Recorded from the function signature.
-qa_record("rankNet reacts to `pathways`",
-          if ("signaling" %in% names(formals(cellchat_plot_ranknet))) "PASS" else "UNWIRED",
-          "cellchat_plot_ranknet() has no signaling/measure parameter")
 
 # ---- per-condition plots: `condition`, `role_pattern`, `pathways` ------------
 cond_a <- names(conditions)[[1]]
@@ -148,20 +139,56 @@ sweep("bubble reacts to `pathways`",
       "bubble_subset", cellchat_plot_bubble(merged, src, tgt, some_pathways),
       "L-R bubble tab")
 
-# netVisual_bubble() has a `thresh` argument, but the wrapper never exposes it,
-# so the sidebar probability/p-value sliders cannot reach the bubble plot.
-qa_record("bubble reacts to `prob_min` / `pval_max`",
-          if (any(c("thresh", "prob_min", "pval_max") %in%
-                  names(formals(cellchat_plot_bubble)))) "PASS" else "UNWIRED",
-          "cellchat_plot_bubble() never passes thresh= to netVisual_bubble()")
+sweep("bubble reacts to `pval_max`",
+      "bubble_pval_1", cellchat_plot_bubble(merged, src, tgt, NULL, pval_max = 1),
+      "bubble_pval_01", cellchat_plot_bubble(merged, src, tgt, NULL, pval_max = 0.01),
+      "L-R bubble tab — pval_max feeds netVisual_bubble(thresh=)")
 
-# ---- overview tab ignores every filter --------------------------------------
-for (fn in c("cellchat_plot_circle_comparison", "cellchat_plot_diff_interaction",
-             "cellchat_plot_compare_interactions")) {
-  args <- setdiff(names(formals(get(fn))), c("merged", "measure"))
-  qa_record(paste0(fn, " accepts filters"),
-            if (length(args) > 0) "PASS" else "UNWIRED",
-            "takes only (merged, measure) — sidebar filters cannot apply")
+# `prob_min` has no counterpart in netVisual_bubble(): CellChat exposes only a
+# p-value threshold there. It stays a table-only filter, and the sidebar says so.
+qa_record("bubble reacts to `prob_min`", "UNWIRED",
+          "by design — netVisual_bubble() has no probability cutoff; labelled table-only")
+
+# ---- rankNet now takes the filters ------------------------------------------
+sweep("rankNet reacts to `pathways`",
+      "ranknet_allpaths", cellchat_plot_ranknet(merged, TRUE),
+      "ranknet_subset", cellchat_plot_ranknet(merged, TRUE, signaling = some_pathways),
+      "Signaling roles tab")
+
+sweep("rankNet reacts to `sources`",
+      "ranknet_src_all", cellchat_plot_ranknet(merged, TRUE),
+      "ranknet_src_sub", cellchat_plot_ranknet(merged, TRUE, sources = src),
+      "Signaling roles tab")
+
+# rankNet deliberately takes no p-value argument. Guard the reason: CellChat's
+# own thresh is inert here, so if a future version starts honouring it this
+# check fails and the slider can be wired up for real.
+ranknet_thresh_data <- function(th) {
+  CellChat::rankNet(merged, mode = "comparison", comparison = 1:2, measure = "weight",
+                    thresh = th, stacked = TRUE, do.stat = TRUE,
+                    return.data = TRUE)$signaling.contribution
+}
+qa_record("rankNet exposes no `pval_max` (CellChat thresh is inert)",
+          if (identical(ranknet_thresh_data(1), ranknet_thresh_data(0.001))) "PASS" else "FAIL",
+          "rankNet(thresh=1) == rankNet(thresh=0.001); slider correctly omitted")
+
+# ---- differential circle plot now takes source/target ------------------------
+sweep("diffInteraction reacts to `sources`",
+      "diff_src_all", cellchat_plot_diff_interaction(merged, "weight"),
+      "diff_src_sub", cellchat_plot_diff_interaction(merged, "weight", sources = src),
+      "Comparison overview")
+
+sweep("diffInteraction reacts to `targets`",
+      "diff_tgt_all", cellchat_plot_diff_interaction(merged, "weight"),
+      "diff_tgt_sub", cellchat_plot_diff_interaction(merged, "weight", targets = tgt),
+      "Comparison overview")
+
+# The two aggregate overview plots are deliberately unfiltered: a circle plot of
+# every cell type and a total-interaction bar chart are the tab's whole point.
+# The sidebar carries a note saying so.
+for (fn in c("cellchat_plot_circle_comparison", "cellchat_plot_compare_interactions")) {
+  qa_record(paste0(fn, " accepts filters"), "UNWIRED",
+            "by design — aggregate overview; sidebar states filters do not apply")
 }
 
 qa_summary()

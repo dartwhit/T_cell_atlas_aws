@@ -100,25 +100,33 @@ testServer(
                        sprintf("%d -> %d rows", nrow(baseline), pathway_rows))
     session$setInputs(level = "LR")
 
-    # --- the suspected gap: `condition` should subset the table --------------
+    # --- the table's own condition scope -------------------------------------
+    session$setInputs(table_condition = CELLCHAT_ALL_CONDITIONS)
+    all_rows <- rows_now()
     per_condition <- vapply(conditions, function(cond) {
-      session$setInputs(condition = cond)
+      session$setInputs(table_condition = cond)
       nrow(filtered_table())
     }, numeric(1))
     qa_expect_reactive(
-      "table reacts to `condition`",
-      length(unique(per_condition)) > 1,
-      paste(sprintf("%s=%d", names(per_condition), per_condition), collapse = ", ")
+      "table reacts to `table_condition`",
+      length(unique(per_condition)) > 1 || all(per_condition < all_rows),
+      paste(c(sprintf("all=%d", all_rows),
+              sprintf("%s=%d", names(per_condition), per_condition)), collapse = ", ")
     )
 
-    # Does the table instead carry every condition at once?
-    spans_all <- "dataset" %in% names(baseline) &&
-      length(unique(baseline$dataset)) == length(conditions)
-    qa_record("table spans all conditions regardless of selection",
-              if (spans_all) "UNWIRED" else "PASS",
-              if (spans_all) paste("dataset column holds:",
-                                   paste(unique(baseline$dataset), collapse = ", "))
-              else "table is condition-scoped")
+    # Scoping to one condition must leave only that condition's rows.
+    session$setInputs(table_condition = conditions[[1]])
+    scoped <- filtered_table()
+    qa_record("scoped table contains only the selected condition",
+              if (identical(unique(scoped$dataset), conditions[[1]])) "PASS" else "UNWIRED",
+              paste("dataset column holds:",
+                    paste(unique(scoped$dataset), collapse = ", ")))
+
+    # ...and the rows must still add up to the unscoped total.
+    qa_record("per-condition row counts sum to the 'All conditions' total",
+              if (sum(per_condition) == all_rows) "PASS" else "FAIL",
+              sprintf("%d == %d", sum(per_condition), all_rows))
+    session$setInputs(table_condition = CELLCHAT_ALL_CONDITIONS)
 
     # --- download handler ----------------------------------------------------
     tmp <- tempfile(fileext = ".csv")
@@ -130,19 +138,24 @@ testServer(
                 if (n > 0) "PASS" else "FAIL", paste(n, "rows"))
     })
 
-    # --- req() swallowed by draw_plot's tryCatch -----------------------------
-    # heatmap_role / role_scatter call req() inside draw_plot(). req() raises
-    # shiny.silent.error, which inherits from "error", so draw_plot's
-    # tryCatch(error=) catches it and renders a bogus error panel instead of
+    # --- draw_plot must not swallow req()'s silent error ---------------------
+    # heatmap_role / role_scatter call req() inside draw_plot(). req() raises a
+    # shiny.silent.error, which inherits from "error", so a bare
+    # tryCatch(error=) would catch it and render a bogus error panel instead of
     # leaving the plot blank while the input is still unset.
-    silent <- tryCatch(
-      stop(structure(class = c("shiny.silent.error", "error", "condition"),
-                     list(message = "", call = NULL))),
-      error = function(e) e
-    )
-    qa_record("draw_plot's tryCatch swallows req()'s silent error",
-              if (inherits(silent, "shiny.silent.error")) "UNWIRED" else "PASS",
-              "req() inside draw_plot renders 'could not be generated:' with empty message")
+    grDevices::pdf(NULL)  # draw_plot's error path draws; keep it off disk
+    on.exit(grDevices::dev.off(), add = TRUE)
+    silent <- tryCatch(draw_plot(function(data) req(NULL)), error = function(e) e)
+    qa_record("draw_plot lets req()'s silent error through",
+              if (inherits(silent, "shiny.silent.error")) "PASS" else "UNWIRED",
+              if (inherits(silent, "shiny.silent.error")) "plot stays blank"
+              else "renders 'could not be generated:' with an empty message")
+
+    # A genuine error must still reach the user as a drawn message.
+    real <- tryCatch(draw_plot(function(data) stop("boom")), error = function(e) e)
+    qa_record("draw_plot still reports genuine plot errors",
+              if (!inherits(real, "error")) "PASS" else "FAIL",
+              "real errors are drawn, not propagated")
   }
 )
 
