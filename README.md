@@ -20,12 +20,14 @@ The application is hosted on AWS and can be accessed [here](https://ssccellatlas
 *   **Differential Expression Analysis:** View and download tables of differentially expressed genes (DEGs).
 *   **Pathway Analysis:** Analyze gene sets and pathways using the VAM method.
 *   **Spatial Data Exploration:** Visualize gene expression in the context of tissue architecture.
+*   **Cell-Cell Communication:** Explore precomputed CellChat networks, signaling pathways, and signaling-role heatmaps for supported studies.
 
 ## 🛠️ Technologies Used
 
 *   **Backend:** R, Shiny
-*   **Bioinformatics:** Seurat, VAM
-*   **Frontend:** HTML, CSS, JavaScript
+*   **Bioinformatics:** Seurat, VAM, CellChat
+*   **Data serialization:** qs2 (fast object loading, with RDS fallback)
+*   **Frontend:** bslib (Bootstrap 5), HTML, CSS, JavaScript
 *   **Deployment:** Docker, AWS, GitHub Actions
 
 ## 📊 Data
@@ -34,11 +36,15 @@ The application uses several publicly available datasets from studies on Systemi
 
 The datasets are configured in `app_code/config/datasets.tsv` and include data from the following studies:
 
+*   TMKMH integrated dataset
 *   Tabib et al. 2021
 *   Gur et al. 2022
-*   Ma et al. 2024
+*   Ma et al. 2024 (single-cell + spatial)
 *   Khanna et al. 2022
-*   TMKMH integrated dataset
+*   Li et al. 2024 (spatial transcriptomics)
+
+Where a fast `.qs2` copy of a dataset sits next to its `.rds`, the app loads the
+`.qs2` for speed and falls back to the `.rds` otherwise.
 
 ## ☁️ Deployment
 
@@ -73,21 +79,24 @@ The app prints its working directory to stderr on startup, so you can confirm it
 
 ### CellChat data
 
-The CellChat tab is enabled only for studies with a complete CellChat entry in
-[app_code/config/dataset_details.json](app_code/config/dataset_details.json).
-The initial Tabib integration expects these precomputed, stripped CellChat
-objects in the study data directory:
+The CellChat tab is enabled only for studies with a complete `cellchat` entry in
+[app_code/config/dataset_details.json](app_code/config/dataset_details.json)
+(currently **Tabib et al. 2021** and the **TMKMH integrated dataset**). Each such
+study expects these precomputed, stripped CellChat objects in its data directory:
 
 ```
-app_code/data/tabib/cellchat/merged.rds
-app_code/data/tabib/cellchat/HC.rds
-app_code/data/tabib/cellchat/SSc.rds
+app_code/data/<study>/cellchat/merged.rds
+app_code/data/<study>/cellchat/HC.rds
+app_code/data/<study>/cellchat/SSc.rds
 ```
 
 For deployment, copy the same directory structure to the mounted EC2 data
-volume under `tabib/cellchat/`. These objects are data assets and must not be
-committed to the repository. The CellChat tab displays a load error if one is
-missing or invalid.
+volume under `<study>/cellchat/`. These objects are data assets and must not be
+committed to the repository. The CellChat tab displays a load error if the
+`CellChat` package is unavailable or an object is missing or invalid.
+
+A standalone test harness for the CellChat explorer lives in
+[tests/cellchat/](tests/cellchat/) — see its `README.md` for how to run it.
 
 ### Pull Request Deployment
 
