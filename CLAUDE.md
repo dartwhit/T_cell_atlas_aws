@@ -27,7 +27,14 @@ docker logs atlas-debug --follow
 docker exec -it atlas-debug bash
 ```
 
-No automated test suite. Testing is done manually via PR deployments (see below).
+### Run Locally Without Docker (Auth Disabled)
+```bash
+cd app_code
+LOCAL_DEV=1 Rscript -e "shiny::runApp('.')"   # 1/true/yes/on skips shinymanager login
+```
+
+### Tests
+No app-wide test suite. The CellChat explorer has a standalone R test harness in `tests/cellchat/` (`test_wiring.R`, `test_plots.R`, `helpers.R`) — run per its `tests/cellchat/README.md`. Broader testing is done manually via PR deployments (see below).
 
 ## Architecture
 
@@ -35,19 +42,32 @@ No automated test suite. Testing is done manually via PR deployments (see below)
 ```
 app_code/
 ├── app.R        # Entry point — sources setup.R, ui.R, server.R
-├── setup.R      # Loads config, reads datasets.tsv and dataset_details.json
+├── setup.R      # Loads config, reads datasets.tsv and dataset_details.json; defines read_object()
 ├── ui.R         # UI layout (bslib Bootstrap 5)
-└── server.R     # All reactive server logic (~960 lines)
+├── server.R     # All reactive server logic (~1200 lines)
+├── config/      # datasets.tsv + dataset_details.json
+├── modules/     # Shiny modules (see below)
+├── www/         # Static assets: styles.css, dataset thumbnails (imgs/)
+└── data/        # Seurat/CellChat data (gitignored, not in repo)
 ```
 
-### Shiny Modules
+### Shiny Modules (`app_code/modules/`)
 - `dataset_gallery_module.R` — Dataset discovery/selection (Datasets tab)
 - `explore_sidebar_module.R` — Controls for study, data level, gene/pathway selection
 - `spatial_unit.R` — Spatial transcriptomics viewer (Visium)
+- `cellchat_explorer_module.R` — CellChat cell-cell communication explorer (CellChat tab UI + server)
+- `cellchat_helpers.R` — Load/validate stripped CellChat objects; network/pathway/heatmap plot helpers
+
+### Data Loading (`read_object()` in setup.R)
+Objects are loaded via `read_object(path)`, which prefers a fast `.qs2` sibling
+(`qs2::qs_read`, ~7x faster than gzipped RDS) when present, else falls back to
+`readRDS()`. So the app works before/without conversion. Convert data with the
+scripts in `scripts/` (`convert_rds_to_qs2.R`, `slim_qs2_inplace.R`). Thread count
+for reads is controlled by `QS2_READ_THREADS`.
 
 ### Configuration
-- `config/datasets.tsv` — Dataset metadata (name, assay type, display info)
-- `config/dataset_details.json` — Per-dataset file paths, data levels, DE file lists, VAM pathway files
+- `config/datasets.tsv` — Dataset metadata (id, name, assay, n_cells, file path, image, tags, has_scrna/has_spatial)
+- `config/dataset_details.json` — Per-dataset file paths, data levels, DE file lists, VAM pathway files, and optional `cellchat` block
 
 ### Data Flow
 ```
@@ -74,6 +94,7 @@ Plots (UMAP, feature, violin/box/dot/heatmap), DEG tables, VAM pathways
 1. **Datasets** — Gallery with search/filter, triggers dataset selection
 2. **Explore** — Main analysis: Plots sub-tab (feature plot, UMAP, expression plot), DEGs table, Metadata
 3. **Spatial data explorer** — Visium spatial viewer
+4. **CellChat** — Cell-cell communication explorer; enabled only for studies with a complete `cellchat` block in `dataset_details.json` (currently `tabib` and `tmkmh`)
 
 ### Authentication
 Shinymanager wraps the entire UI. Credentials stored in SQLite (`users_current.sqlite`), mounted as a shared Docker volume (`users-db`) across all 3 containers.
@@ -91,7 +112,7 @@ Every PR triggers `.github/workflows/deploy-pr.yml`:
 Push to `main` triggers `.github/workflows/deploy.yml` — deploys 3-container stack with Nginx load balancer.
 
 ### Data Volumes
-Data files (Seurat RDS, gene lists, DEG tables, VAM files) are mounted read-only at `/srv/shiny-server/atlas/data/`. They are NOT in the repo. File paths are configured in `config/dataset_details.json`.
+Data files (Seurat RDS/qs2, gene lists, DEG tables, VAM files, CellChat objects) are mounted read-only at `/srv/shiny-server/atlas/data/`. They are NOT in the repo. File paths are configured in `config/dataset_details.json`. Stripped CellChat objects live under `<study>/cellchat/` (`merged.rds`, `HC.rds`, `SSc.rds`).
 
 ## Key Dependencies
 
@@ -99,8 +120,13 @@ Data files (Seurat RDS, gene lists, DEG tables, VAM files) are mounted read-only
 |---------|---------|
 | Seurat | scRNA-seq and spatial data analysis |
 | VAM | Pathway/gene set scoring |
+| CellChat | Cell-cell communication (CellChat tab; optional — tab shows an error if the package or data is missing) |
+| qs2 | Fast object serialization (optional; falls back to readRDS) |
 | shinymanager | Authentication |
-| bslib | Bootstrap 5 theming |
+| bslib / bsicons | Bootstrap 5 theming and icons |
+| shinyWidgets / shinyjs / shinycssloaders | UI controls, JS helpers, loading spinners |
+| periscope2 | Downloadable plot/table widgets |
 | DT | Interactive DEG tables |
-| plotly | Interactive plots |
-| igraph | Network analysis |
+| dplyr / tidyr / stringr | Data wrangling |
+| ggplot2 | Plotting |
+| jsonlite | Reads dataset_details.json |

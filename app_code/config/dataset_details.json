@@ -8,6 +8,13 @@
       "Immune cells": "immune"
     },
     "files": {
+      "cellchat": {
+        "merged": "cellchat/merged.rds",
+        "conditions": {
+          "HC": "cellchat/HC.rds",
+          "SSc": "cellchat/SSc.rds"
+        }
+      },
       "full": {
         "seurat": "TMKMH_filtered_reduced_2025-06-06_VAM.rds",
         "gene_list": "TMKMH_gene_list.rds",
