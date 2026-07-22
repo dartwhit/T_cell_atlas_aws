@@ -80,7 +80,11 @@ jobs:
             [ -n "${CID:-}" ] && docker stop "$CID" && docker rm "$CID" || true
 
             echo "🛠 Building PR image..."
-            docker build --no-cache -t "atlas:pr-${PR_NUM}" .
+            # Stamp the image with a build-input fingerprint so a later merge to main
+            # can detect a byte-identical build and reuse this image instead of rebuilding.
+            FP=$(git rev-parse HEAD:Dockerfile HEAD:shiny-server.conf HEAD:app_code | git hash-object --stdin)
+            echo "  Build fingerprint: $FP"
+            docker build --no-cache -t "atlas:pr-${PR_NUM}" --label "atlas.build_fp=${FP}" .
 
             echo "🚀 Running PR container on port ${PR_PORT}..."
             docker run -d \

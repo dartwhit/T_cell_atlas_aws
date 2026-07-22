@@ -26,6 +26,7 @@ services:
 
   shiny-app-1:
     build: .
+    image: tcell_atlas:latest
     container_name: tcell_atlas_app_1
     restart: unless-stopped
     environment:
@@ -50,7 +51,7 @@ services:
         max-file: "3"
 
   shiny-app-2:
-    build: .
+    image: tcell_atlas:latest
     container_name: tcell_atlas_app_2
     restart: unless-stopped
     environment:
@@ -75,7 +76,7 @@ services:
         max-file: "3"
 
   shiny-app-3:
-    build: .
+    image: tcell_atlas:latest
     container_name: tcell_atlas_app_3
     restart: unless-stopped
     environment:

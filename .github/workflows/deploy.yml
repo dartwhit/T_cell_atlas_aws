@@ -8,6 +8,11 @@ on:
         required: false
         type: boolean
         default: false
+      force_rebuild:
+        description: 'Force a full image rebuild with a fresh base image (ignore reuse/cache)'
+        required: false
+        type: boolean
+        default: false
   push:
     branches: [ main ]
     paths:
@@ -63,8 +68,30 @@ jobs:
             # Give it a moment
             sleep 2
 
-            echo "🛠 Building images with cache..."
-            docker-compose build --pull
+            echo "🛠 Preparing production image (reuse-or-build-once)..."
+            # Fingerprint the only inputs that affect image content: the Dockerfile
+            # (drives apt/R/CellChat) and what it COPYs (app_code/ + shiny-server.conf).
+            # Same fingerprint => byte-identical image, so we can safely reuse an
+            # already-built image (e.g. the PR image on this same host) instead of
+            # rebuilding all three containers from scratch.
+            FP=$(git rev-parse HEAD:Dockerfile HEAD:shiny-server.conf HEAD:app_code | git hash-object --stdin)
+            echo "  Build fingerprint: $FP"
+
+            if [ "${{ github.event.inputs.force_rebuild }}" = "true" ]; then
+              echo "  🛠 force_rebuild — full rebuild with a fresh base image"
+              docker build --pull -t tcell_atlas:latest --label "atlas.build_fp=${FP}" .
+            elif [ "$(docker image inspect tcell_atlas:latest --format '{{index .Config.Labels "atlas.build_fp"}}' 2>/dev/null)" = "$FP" ]; then
+              echo "  ✓ Current tcell_atlas:latest already matches main — no build needed"
+            else
+              MATCH=$(docker images --filter "label=atlas.build_fp=${FP}" --format '{{.ID}}' | head -1)
+              if [ -n "${MATCH:-}" ]; then
+                echo "  ✓ Reusing existing image $MATCH (fingerprint match, e.g. the PR image)"
+                docker tag "$MATCH" tcell_atlas:latest
+              else
+                echo "  🛠 No matching image — building once (layer cache preserved)"
+                docker build -t tcell_atlas:latest --label "atlas.build_fp=${FP}" .
+              fi
+            fi
 
             echo "🔐 Setting up environment..."
             echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" > .env
