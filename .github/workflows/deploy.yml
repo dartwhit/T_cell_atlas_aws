@@ -8,6 +8,11 @@ on:
         required: false
         type: boolean
         default: false
+      force_rebuild:
+        description: 'Force a full image rebuild with a fresh base image (ignore reuse/cache)'
+        required: false
+        type: boolean
+        default: false
   push:
     branches: [ main ]
     paths:
@@ -17,6 +22,14 @@ on:
       - '.github/workflows/deploy.yml'
       - 'app_code/**'
       - 'shiny-server.conf'
+
+# Serialize production deploys so a new push to main waits for the in-flight run
+# instead of racing it on the EC2 host. cancel-in-progress is intentionally false:
+# cancelling a run does NOT kill its remote SSH script, so overlapping runs would
+# fight over containers/port 80. Queuing guarantees the newest commit deploys last.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -63,8 +76,35 @@ jobs:
             # Give it a moment
             sleep 2
 
-            echo "🛠 Building images with cache..."
-            docker-compose build --pull
+            echo "🛠 Preparing production image (reuse-or-build-once)..."
+            # Fingerprint the only inputs that affect image content: the Dockerfile
+            # (drives apt/R/CellChat) and what it COPYs (app_code/ + shiny-server.conf).
+            # Same fingerprint => byte-identical image, so we can safely reuse an
+            # already-built image (e.g. the PR image on this same host) instead of
+            # rebuilding all three containers from scratch.
+            FP=$(git rev-parse HEAD:Dockerfile HEAD:shiny-server.conf HEAD:app_code | git hash-object --stdin)
+            echo "  Build fingerprint: $FP"
+
+            # Fingerprint currently tagged as tcell_atlas:latest, if any. The `|| true`
+            # keeps a missing image / missing label (e.g. the first run after introducing
+            # labels) from tripping `set -e` — it just yields an empty CURRENT_FP.
+            CURRENT_FP=$(docker image inspect tcell_atlas:latest --format '{{index .Config.Labels "atlas.build_fp"}}' 2>/dev/null || true)
+
+            if [ "${{ github.event.inputs.force_rebuild }}" = "true" ]; then
+              echo "  🛠 force_rebuild — full rebuild with a fresh base image"
+              docker build --pull -t tcell_atlas:latest --label "atlas.build_fp=${FP}" .
+            elif [ "$CURRENT_FP" = "$FP" ]; then
+              echo "  ✓ Current tcell_atlas:latest already matches main — no build needed"
+            else
+              MATCH=$(docker images --filter "label=atlas.build_fp=${FP}" --format '{{.ID}}' | head -1)
+              if [ -n "${MATCH:-}" ]; then
+                echo "  ✓ Reusing existing image $MATCH (fingerprint match, e.g. the PR image)"
+                docker tag "$MATCH" tcell_atlas:latest
+              else
+                echo "  🛠 No matching image — building once (layer cache preserved)"
+                docker build -t tcell_atlas:latest --label "atlas.build_fp=${FP}" .
+              fi
+            fi
 
             echo "🔐 Setting up environment..."
             echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" > .env

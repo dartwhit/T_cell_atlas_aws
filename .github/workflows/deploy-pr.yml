@@ -7,6 +7,14 @@ on:
     types: [opened, synchronize, reopened]
   workflow_dispatch:
 
+# Serialize deploys per PR so a new push waits for the in-flight run to finish
+# instead of racing it on the EC2 host. cancel-in-progress is intentionally false:
+# cancelling a run does NOT kill its remote SSH script, which would keep creating
+# the atlas-pr-<N> container and collide with the next run's `docker run`.
+concurrency:
+  group: deploy-pr-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 jobs:
   deploy-pr:
     runs-on: ubuntu-latest
@@ -80,7 +88,11 @@ jobs:
             [ -n "${CID:-}" ] && docker stop "$CID" && docker rm "$CID" || true
 
             echo "🛠 Building PR image..."
-            docker build --no-cache -t "atlas:pr-${PR_NUM}" .
+            # Stamp the image with a build-input fingerprint so a later merge to main
+            # can detect a byte-identical build and reuse this image instead of rebuilding.
+            FP=$(git rev-parse HEAD:Dockerfile HEAD:shiny-server.conf HEAD:app_code | git hash-object --stdin)
+            echo "  Build fingerprint: $FP"
+            docker build --no-cache -t "atlas:pr-${PR_NUM}" --label "atlas.build_fp=${FP}" .
 
             echo "🚀 Running PR container on port ${PR_PORT}..."
             docker run -d \
