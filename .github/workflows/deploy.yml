@@ -83,36 +83,17 @@ jobs:
             echo "🛠 Preparing production image (reuse-or-build-once)..."
             # Fingerprint the only inputs that affect image content: the Dockerfile
             # (drives apt/R/CellChat) and what it COPYs (app_code/ + shiny-server.conf).
-            # Same fingerprint => byte-identical image, so we can safely reuse an
-            # already-built image (e.g. the PR image on this same host) instead of
-            # rebuilding all three containers from scratch.
+            # Same fingerprint => byte-identical image, so scripts/deploy_prepare_image.sh
+            # can reuse an already-built image (e.g. the PR image on this host) instead
+            # of rebuilding all three containers from scratch.
+            #
+            # The reuse/build logic lives in a standalone script and is invoked in ONE
+            # line on purpose: appleboy/ssh-action (script_stop) splits this block by
+            # newline and injects exit-code checks between lines, which corrupts inline
+            # multi-line constructs (if/elif/else, multi-line $()). A single-line call
+            # to a real bash script is immune to that.
             FP=$(git rev-parse HEAD:Dockerfile HEAD:shiny-server.conf HEAD:app_code | git hash-object --stdin)
-            echo "  Build fingerprint: $FP"
-
-            # Fingerprint currently tagged as tcell_atlas:latest, if any. The `|| true`
-            # keeps a missing image / missing label (e.g. the first run after introducing
-            # labels) from tripping `set -e` — it just yields an empty CURRENT_FP.
-            CURRENT_FP=$(docker image inspect tcell_atlas:latest --format '{{index .Config.Labels "atlas.build_fp"}}' 2>/dev/null || true)
-
-            if [ "${{ github.event.inputs.force_rebuild }}" = "true" ]; then
-              echo "  🛠 force_rebuild — full rebuild with a fresh base image"
-              docker build --pull -t tcell_atlas:latest --label "atlas.build_fp=${FP}" .
-            elif [ "$CURRENT_FP" = "$FP" ]; then
-              echo "  ✓ Current tcell_atlas:latest already matches main — no build needed"
-            else
-              # Grab matching image IDs without a pipe, then take the first line via
-              # parameter expansion. Piping to `head` would SIGPIPE the producer, and
-              # under `set -o pipefail` that non-zero status aborts the whole deploy.
-              MATCHES=$(docker images --filter "label=atlas.build_fp=${FP}" --format '{{.ID}}')
-              MATCH=${MATCHES%%$'\n'*}
-              if [ -n "$MATCH" ]; then
-                echo "  ✓ Reusing existing image $MATCH (fingerprint match, e.g. the PR image)"
-                docker tag "$MATCH" tcell_atlas:latest
-              else
-                echo "  🛠 No matching image — building once (layer cache preserved)"
-                docker build -t tcell_atlas:latest --label "atlas.build_fp=${FP}" .
-              fi
-            fi
+            bash scripts/deploy_prepare_image.sh "$FP" "${{ github.event.inputs.force_rebuild }}"
 
             echo "🔐 Setting up environment..."
             echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" > .env
