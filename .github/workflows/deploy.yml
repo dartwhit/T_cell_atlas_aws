@@ -96,8 +96,12 @@ jobs:
             elif [ "$CURRENT_FP" = "$FP" ]; then
               echo "  ✓ Current tcell_atlas:latest already matches main — no build needed"
             else
-              MATCH=$(docker images --filter "label=atlas.build_fp=${FP}" --format '{{.ID}}' | head -1)
-              if [ -n "${MATCH:-}" ]; then
+              # Grab matching image IDs without a pipe, then take the first line via
+              # parameter expansion. Piping to `head` would SIGPIPE the producer, and
+              # under `set -o pipefail` that non-zero status aborts the whole deploy.
+              MATCHES=$(docker images --filter "label=atlas.build_fp=${FP}" --format '{{.ID}}')
+              MATCH=${MATCHES%%$'\n'*}
+              if [ -n "$MATCH" ]; then
                 echo "  ✓ Reusing existing image $MATCH (fingerprint match, e.g. the PR image)"
                 docker tag "$MATCH" tcell_atlas:latest
               else
