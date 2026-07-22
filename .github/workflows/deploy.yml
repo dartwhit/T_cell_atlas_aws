@@ -65,9 +65,13 @@ jobs:
             # Kill any process using port 80
             sudo lsof -ti:80 | xargs -r sudo kill -9 || true
             
-            # Also check for docker containers on port 80
-            CONTAINER_ID=$(docker ps -a --filter "publish=80" --format "{{.ID}}" | head -1)
-            if [ -n "${CONTAINER_ID:-}" ]; then
+            # Also check for docker containers on port 80. Capture IDs without a
+            # pipe and take the first line via parameter expansion — piping to
+            # `head` would SIGPIPE `docker ps` and, under `set -o pipefail`, abort
+            # the deploy (right after `docker-compose down` took prod down).
+            PORT80_IDS=$(docker ps -a --filter "publish=80" --format "{{.ID}}")
+            CONTAINER_ID=${PORT80_IDS%%$'\n'*}
+            if [ -n "$CONTAINER_ID" ]; then
               echo "  Found container using port 80: $CONTAINER_ID, removing..."
               docker stop "$CONTAINER_ID" || true
               docker rm "$CONTAINER_ID" || true
