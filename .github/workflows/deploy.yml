@@ -23,6 +23,14 @@ on:
       - 'app_code/**'
       - 'shiny-server.conf'
 
+# Serialize production deploys so a new push to main waits for the in-flight run
+# instead of racing it on the EC2 host. cancel-in-progress is intentionally false:
+# cancelling a run does NOT kill its remote SSH script, so overlapping runs would
+# fight over containers/port 80. Queuing guarantees the newest commit deploys last.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest

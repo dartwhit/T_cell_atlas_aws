@@ -7,6 +7,14 @@ on:
     types: [opened, synchronize, reopened]
   workflow_dispatch:
 
+# Serialize deploys per PR so a new push waits for the in-flight run to finish
+# instead of racing it on the EC2 host. cancel-in-progress is intentionally false:
+# cancelling a run does NOT kill its remote SSH script, which would keep creating
+# the atlas-pr-<N> container and collide with the next run's `docker run`.
+concurrency:
+  group: deploy-pr-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
 jobs:
   deploy-pr:
     runs-on: ubuntu-latest
