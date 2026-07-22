@@ -77,10 +77,15 @@ jobs:
             FP=$(git rev-parse HEAD:Dockerfile HEAD:shiny-server.conf HEAD:app_code | git hash-object --stdin)
             echo "  Build fingerprint: $FP"
 
+            # Fingerprint currently tagged as tcell_atlas:latest, if any. The `|| true`
+            # keeps a missing image / missing label (e.g. the first run after introducing
+            # labels) from tripping `set -e` — it just yields an empty CURRENT_FP.
+            CURRENT_FP=$(docker image inspect tcell_atlas:latest --format '{{index .Config.Labels "atlas.build_fp"}}' 2>/dev/null || true)
+
             if [ "${{ github.event.inputs.force_rebuild }}" = "true" ]; then
               echo "  🛠 force_rebuild — full rebuild with a fresh base image"
               docker build --pull -t tcell_atlas:latest --label "atlas.build_fp=${FP}" .
-            elif [ "$(docker image inspect tcell_atlas:latest --format '{{index .Config.Labels "atlas.build_fp"}}' 2>/dev/null)" = "$FP" ]; then
+            elif [ "$CURRENT_FP" = "$FP" ]; then
               echo "  ✓ Current tcell_atlas:latest already matches main — no build needed"
             else
               MATCH=$(docker images --filter "label=atlas.build_fp=${FP}" --format '{{.ID}}' | head -1)
