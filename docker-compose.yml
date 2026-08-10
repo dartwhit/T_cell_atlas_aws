@@ -32,7 +32,7 @@ services:
     environment:
       - SHINY_LOG_LEVEL=INFO
       - CONTAINER_NAME=shiny-app-1
-      - LOCAL_DEV=1
+      - LOCAL_DEV=${LOCAL_DEV:-0}
     volumes:
       - /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro
       - shiny-logs-1:/var/log/shiny-server
@@ -58,7 +58,7 @@ services:
     environment:
       - SHINY_LOG_LEVEL=INFO
       - CONTAINER_NAME=shiny-app-2
-      - LOCAL_DEV=1
+      - LOCAL_DEV=${LOCAL_DEV:-0}
     volumes:
       - /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro
       - shiny-logs-2:/var/log/shiny-server
@@ -84,7 +84,7 @@ services:
     environment:
       - SHINY_LOG_LEVEL=INFO
       - CONTAINER_NAME=shiny-app-3
-      - LOCAL_DEV=1
+      - LOCAL_DEV=${LOCAL_DEV:-0}
     volumes:
       - /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro
       - shiny-logs-3:/var/log/shiny-server
