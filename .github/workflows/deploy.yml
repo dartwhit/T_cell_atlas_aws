@@ -96,7 +96,10 @@ jobs:
             bash scripts/deploy_prepare_image.sh "$FP" "${{ github.event.inputs.force_rebuild }}"
 
             echo "🔐 Setting up environment..."
-            echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" > .env
+            {
+              echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}"
+              echo "LOCAL_DEV=1"
+            } > .env
 
             echo "🔐 Verifying port 80 is free..."
             if sudo lsof -ti:80 >/dev/null 2>&1; then
