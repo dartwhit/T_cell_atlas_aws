@@ -42,7 +42,8 @@ jobs:
             sudo chmod 777 /home/ubuntu/atlas/logs/dev
 
             echo "🧹 Removing existing DEV container (if any)..."
-            docker rm -f atlas-dev || true
+            docker stop atlas-dev 2>/dev/null || true
+            docker rm -f atlas-dev 2>/dev/null || true
 
             echo "🔍 Freeing port 3840 if used..."
             CID=$(docker ps --filter "publish=3840" --format "{{.ID}}")
