@@ -90,7 +90,7 @@ jobs:
             echo "🛠 Building PR image..."
             # Stamp the image with a build-input fingerprint so a later merge to main
             # can detect a byte-identical build and reuse this image instead of rebuilding.
-            FP=$(git rev-parse HEAD:Dockerfile HEAD:shiny-server.conf HEAD:app_code | git hash-object --stdin)
+            FP=$(git rev-parse HEAD:Dockerfile HEAD:shiny-server.conf HEAD:docker-entrypoint.sh HEAD:app_code | git hash-object --stdin)
             echo "  Build fingerprint: $FP"
             docker build --no-cache -t "atlas:pr-${PR_NUM}" --label "atlas.build_fp=${FP}" .
 
@@ -100,6 +100,7 @@ jobs:
               --restart unless-stopped \
               -p "${PR_PORT}:3838" \
               -e SHINY_LOG_STDERR=1 \
+              -e LOCAL_DEV=1 \
               -e ANTHROPIC_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}" \
               -v /home/ubuntu/atlas/data:/srv/shiny-server/atlas/data:ro \
               -v "/home/ubuntu/atlas/pr_data/pr-${PR_NUM}:/srv/shiny-server/data" \

@@ -41,7 +41,12 @@ RUN mkdir -p /var/log/shiny-server && \
     find /srv/shiny-server/atlas/data -type f -name "*.db" -exec chmod 664 {} \;
 
 
+# Bridge container env vars into R's environment (Shiny Server drops them)
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # Expose Shiny port
 EXPOSE 3838
 
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["/usr/bin/shiny-server"]
