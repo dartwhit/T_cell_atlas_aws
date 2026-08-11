@@ -82,7 +82,8 @@ jobs:
 
             echo "🛠 Preparing production image (reuse-or-build-once)..."
             # Fingerprint the only inputs that affect image content: the Dockerfile
-            # (drives apt/R/CellChat) and what it COPYs (app_code/ + shiny-server.conf).
+            # (drives apt/R/CellChat) and what it COPYs (app_code/, shiny-server.conf,
+            # docker-entrypoint.sh).
             # Same fingerprint => byte-identical image, so scripts/deploy_prepare_image.sh
             # can reuse an already-built image (e.g. the PR image on this host) instead
             # of rebuilding all three containers from scratch.
@@ -92,7 +93,7 @@ jobs:
             # newline and injects exit-code checks between lines, which corrupts inline
             # multi-line constructs (if/elif/else, multi-line $()). A single-line call
             # to a real bash script is immune to that.
-            FP=$(git rev-parse HEAD:Dockerfile HEAD:shiny-server.conf HEAD:app_code | git hash-object --stdin)
+            FP=$(git rev-parse HEAD:Dockerfile HEAD:shiny-server.conf HEAD:docker-entrypoint.sh HEAD:app_code | git hash-object --stdin)
             bash scripts/deploy_prepare_image.sh "$FP" "${{ github.event.inputs.force_rebuild }}"
 
             echo "🔐 Setting up environment..."
