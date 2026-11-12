@@ -157,51 +157,10 @@ jobs:
               -v t_cell_atlas_aws_users-db:/data \
               alpine chmod 777 /data
 
-            echo "⏳ Waiting for containers to be healthy (max 120s)..."
-            MAX_ATTEMPTS=60
-            ATTEMPT=0
-            while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-              HEALTHY_COUNT=$(docker-compose ps | grep -c "(healthy)" || true)
-              TOTAL_COUNT=$(docker-compose ps | grep -c "shiny-app" || true)
-              
-              if [ "$HEALTHY_COUNT" -eq 3 ] && [ "$TOTAL_COUNT" -eq 3 ]; then
-                echo "✓ All containers healthy!"
-                break
-              fi
-              
-              echo "  [$(($ATTEMPT + 1))/$MAX_ATTEMPTS] Healthy: $HEALTHY_COUNT/3 containers"
-              sleep 2
-              ATTEMPT=$((ATTEMPT + 1))
-            done
-
-            if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
-              echo "⚠️  Health check timeout after 120s"
-            fi
-
-            echo "🌐 Ensuring nginx is running..." && docker-compose up -d nginx
-
-            echo "🩺 Final health check via HTTP..."
-            RETRY_COUNT=0
-            while [ $RETRY_COUNT -lt 5 ]; do
-              if curl -sSf http://localhost/atlas/ >/dev/null 2>&1; then
-                echo "✓ HTTP health check passed!"
-                break
-              fi
-              echo "  Attempt $((RETRY_COUNT + 1))/5 failed, retrying..."
-              sleep 3
-              RETRY_COUNT=$((RETRY_COUNT + 1))
-            done
-
-            if [ $RETRY_COUNT -eq 5 ]; then
-              echo "❌ HTTP health check failed after 5 attempts"
-              echo "Container status:"
-              docker-compose ps
-              echo "Nginx logs:"
-              docker-compose logs --tail=30 nginx
-              echo "App 1 logs:"
-              docker-compose logs --tail=30 shiny-app-1
-              exit 1
-            fi
+            # Start nginx, wait (up to the 450s healthcheck window) for all three apps to be
+            # healthy, then probe https://.../atlas/ through nginx; fails the deploy otherwise.
+            # Single-line call on purpose (see the deploy_prepare_image.sh comment above).
+            echo "🩺 Verifying stack (nginx + app health + HTTPS probe)..." && bash scripts/verify_stack.sh
 
             echo "✅ Deployed successfully!"
             echo "📊 Final Container Status:"

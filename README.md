@@ -59,7 +59,7 @@ cd /home/ubuntu/T_cell_atlas_aws
 bash scripts/start_stack.sh
 ```
 
-It finishes by printing `docker-compose ps` and the HTTP status of `http://localhost/atlas/`.
+It waits for all three app replicas to become healthy and checks that `https://ssccellatlas.dartmouth.edu/atlas/` is served through nginx. It exits non-zero, with container status and logs, if nginx fails to start or the site never becomes ready.
 
 ## 🧪 Development & Testing
 
