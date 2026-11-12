@@ -111,7 +111,7 @@ jobs:
             echo "✓ Port 80 is free"
 
             echo "🚀 Starting multi-container stack..."
-            docker-compose up -d --remove-orphans
+            docker-compose up -d --remove-orphans || echo "⚠️ compose up returned non-zero; will ensure nginx is started below"
 
             echo "📋 Initializing user database..."
             # Check if force sync is requested or if database doesn't exist
@@ -161,7 +161,7 @@ jobs:
             MAX_ATTEMPTS=60
             ATTEMPT=0
             while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-              HEALTHY_COUNT=$(docker-compose ps | grep -c "healthy" || true)
+              HEALTHY_COUNT=$(docker-compose ps | grep -c "(healthy)" || true)
               TOTAL_COUNT=$(docker-compose ps | grep -c "shiny-app" || true)
               
               if [ "$HEALTHY_COUNT" -eq 3 ] && [ "$TOTAL_COUNT" -eq 3 ]; then
@@ -177,6 +177,8 @@ jobs:
             if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
               echo "⚠️  Health check timeout after 120s"
             fi
+
+            echo "🌐 Ensuring nginx is running..." && docker-compose up -d nginx
 
             echo "🩺 Final health check via HTTP..."
             RETRY_COUNT=0

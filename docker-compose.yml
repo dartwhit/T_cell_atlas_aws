@@ -10,11 +10,11 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       shiny-app-1:
-        condition: service_healthy
+        condition: service_started
       shiny-app-2:
-        condition: service_healthy
+        condition: service_started
       shiny-app-3:
-        condition: service_healthy
+        condition: service_started
     restart: unless-stopped
     networks:
       - shiny-network
@@ -43,8 +43,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:3838/atlas/"]
       interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 180s
+      retries: 10
+      start_period: 300s
     logging:
       driver: "json-file"
       options:
@@ -69,8 +69,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:3838/atlas/"]
       interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 180s
+      retries: 10
+      start_period: 300s
     logging:
       driver: "json-file"
       options:
@@ -95,8 +95,8 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:3838/atlas/"]
       interval: 15s
       timeout: 10s
-      retries: 5
-      start_period: 180s
+      retries: 10
+      start_period: 300s
     logging:
       driver: "json-file"
       options:
