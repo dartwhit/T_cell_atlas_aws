@@ -50,6 +50,17 @@ Where a fast `.qs2` copy of a dataset sits next to its `.rds`, the app loads the
 
 This application is designed for deployment on AWS. The `Dockerfile` is used to containerize the application, and the `.github/workflows` directory contains GitHub Actions for automated deployment to a development or production environment.
 
+### Manual restart on EC2
+
+To start or restart the production stack by hand over SSH, don't run a bare `docker-compose up`. If an app replica is slow to pass its healthcheck, compose can abort and leave the `nginx` container stuck in the *Created* state, so the site refuses connections. Use the helper script instead, which always starts nginx afterwards:
+
+```bash
+cd /home/ubuntu/T_cell_atlas_aws
+bash scripts/start_stack.sh
+```
+
+It waits for all three app replicas to become healthy and checks that `https://ssccellatlas.dartmouth.edu/atlas/` is served through nginx. It exits non-zero, with container status and logs, if nginx fails to start or the site never becomes ready.
+
 ## 🧪 Development & Testing
 
 ### Running Locally (Auth Disabled)
