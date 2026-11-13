@@ -483,7 +483,7 @@ server <- function(input, output, session) {
     
     
     print(paste("Loaded",sidebar_inputs$data_level(),"from dataset:", sidebar_inputs$study()))  
-    showNotification(paste("Loading data for study:", sidebar_inputs$study(),
+    showNotification(paste("Loading data for study:", study_label(sidebar_inputs$study()),
                            "and data level:", sidebar_inputs$data_level()), type = "message")
 
     cat(sprintf("[load-timing] %-22s %6.2fs  (study=%s level=%s)\n",
@@ -1112,7 +1112,7 @@ server <- function(input, output, session) {
   
   output$downloadDEGs <- downloadHandler(
     filename = function(){
-      paste0(sidebar_inputs$study(),"_DEGs_",sidebar_inputs$data_level(),".txt")
+      paste0(study_file_tag(sidebar_inputs$study()),"_DEGs_",sidebar_inputs$data_level(),".txt")
     },
     content = function(file){
       write.table(DEGs_df_show(), file)
