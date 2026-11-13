@@ -275,7 +275,7 @@ cellchat_explorer_server <- function(id, dataset_configs, gallery_selection = NU
 
     output$download <- downloadHandler(
       filename = function() {
-        paste0("cellchat_", selected_study(), "_", input$level, "_filtered.csv")
+        paste0("cellchat_", study_file_tag(selected_study()), "_", input$level, "_filtered.csv")
       },
       content = function(file) {
         utils::write.csv(filtered_table(), file, row.names = FALSE)

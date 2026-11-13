@@ -36,7 +36,7 @@ The application uses several publicly available datasets from studies on Systemi
 
 The datasets are configured in `app_code/config/datasets.tsv` and include data from the following studies:
 
-*   TMKMH integrated dataset
+*   TMH integrated dataset
 *   Tabib et al. 2021
 *   Gur et al. 2022
 *   Ma et al. 2024 (single-cell + spatial)
@@ -92,7 +92,7 @@ The app prints its working directory to stderr on startup, so you can confirm it
 
 The CellChat tab is enabled only for studies with a complete `cellchat` entry in
 [app_code/config/dataset_details.json](app_code/config/dataset_details.json)
-(currently **Tabib et al. 2021** and the **TMKMH integrated dataset**). Each such
+(currently **Tabib et al. 2021** and the **TMH integrated dataset**). Each such
 study expects these precomputed, stripped CellChat objects in its data directory:
 
 ```

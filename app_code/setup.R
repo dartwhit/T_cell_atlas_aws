@@ -116,6 +116,19 @@ for (i in 1:nrow(dataset_meta)) {
 # Create a named vector of dataset choices for use in UI dropdowns
 dataset_choices <- setNames(dataset_meta$id, dataset_meta$name)
 
+# User-facing label for a dataset id (the `name` column), e.g. "TMH integrated
+# dataset". Use this instead of the raw id anywhere text is shown to users,
+# since ids are tied to data folder names and may lag behind renames.
+study_label <- function(id) {
+  label <- names(dataset_choices)[match(id, dataset_choices)]
+  if (length(label) == 0 || is.na(label)) id else label
+}
+
+# Short tag for download filenames: first word of the label, e.g. "TMH", "Tabib".
+study_file_tag <- function(id) {
+  gsub("[^A-Za-z0-9]+", "_", sub("\\s.*$", "", study_label(id)))
+}
+
 # scRNA-only choices for the Explore sidebar (excludes spatial-only datasets)
 scrna_dataset_choices <- setNames(
   dataset_meta$id[dataset_meta$has_scrna],
