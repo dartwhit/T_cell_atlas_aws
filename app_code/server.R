@@ -189,8 +189,8 @@ server <- function(input, output, session) {
     updateSelectInput(session, "study", selected = "khanna")
   })
   
-  observeEvent(input$explore_tmkmh,{
-    updateSelectInput(session, "study", selected = "tmkmh")
+  observeEvent(input$explore_tmh,{
+    updateSelectInput(session, "study", selected = "tmh")
   })
 
   ################################## Explore page #################################

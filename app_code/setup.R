@@ -29,6 +29,12 @@ read_object <- function(path) {
     stop("read_object(): 'path' must be a single non-empty file path; got ",
          deparse(path))
   }
+  # A path that already names a .qs2 file (e.g. data shipped only as qs2).
+  if (grepl("\\.qs2$", path, ignore.case = TRUE)) {
+    if (!qs2_available) stop("read_object(): qs2 package is required to read ", path)
+    cat("[read_object] qs2:", path, "\n", file = stderr())
+    return(qs2::qs_read(path, nthreads = qs2_read_threads))
+  }
   if (qs2_available) {
     qs2_path <- sub("\\.rds$", ".qs2", path, ignore.case = TRUE)
     if (qs2_path != path && file.exists(qs2_path)) {

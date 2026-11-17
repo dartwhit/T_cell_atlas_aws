@@ -94,7 +94,7 @@ Plots (UMAP, feature, violin/box/dot/heatmap), DEG tables, VAM pathways
 1. **Datasets** — Gallery with search/filter, triggers dataset selection
 2. **Explore** — Main analysis: Plots sub-tab (feature plot, UMAP, expression plot), DEGs table, Metadata
 3. **Spatial data explorer** — Visium spatial viewer
-4. **CellChat** — Cell-cell communication explorer; enabled only for studies with a complete `cellchat` block in `dataset_details.json` (currently `tabib` and `tmkmh`)
+4. **CellChat** — Cell-cell communication explorer; enabled only for studies with a complete `cellchat` block in `dataset_details.json` (currently `tabib`; `tmh` is pending its CellChat objects)
 
 ### Authentication
 Shinymanager wraps the entire UI. Credentials stored in SQLite (`users_current.sqlite`), mounted as a shared Docker volume (`users-db`) across all 3 containers.

@@ -1,5 +1,5 @@
 {
-  "tmkmh": {
+  "tmh": {
     "comparison_type": "disease",
     "comparison_label": "SSc vs Healthy",
     "data_levels": {
@@ -8,36 +8,32 @@
       "Immune cells": "immune"
     },
     "files": {
-      "cellchat": {
-        "merged": "cellchat/merged.rds",
-        "conditions": {
-          "HC": "cellchat/HC.rds",
-          "SSc": "cellchat/SSc.rds"
-        }
-      },
       "full": {
-        "seurat": "TMKMH_filtered_reduced_2025-06-06_VAM.rds",
-        "gene_list": "TMKMH_gene_list.rds",
-        "DEGs_auto": "TMKMH_auto_DEGs_sig.txt",
-        "DEGs_broad": "TMKMH_broad_DEGs_sig.txt",
-        "VAM_df": "TMKMH_full_filtered_VAM_top.txt",
-        "DE_by_disease_broad": "TMKMH_full_broad_DE_by_disease.txt",
-        "DE_by_disease_auto": "TMKMH_full_auto_DE_by_disease.txt"
+        "seurat": "TMH_full_VAM.qs2",
+        "gene_list": "TMH_gene_list.qs2",
+        "DEGs_auto": "TMH_auto_DEGs_sig.txt",
+        "DEGs_broad": "TMH_broad_DEGs_sig.txt",
+        "VAM_df": "TMH_full_VAM_top.txt",
+        "DE_by_disease_broad": "TMH_broad_DE_by_disease.txt",
+        "DE_by_disease_auto": "TMH_auto_DE_by_disease.txt",
+        "VAM_by_disease_broad": "TMH_broad_VAMcdf_DE_by_disease.txt",
+        "VAM_by_disease_auto": "TMH_auto_VAMcdf_DE_by_disease.txt"
       },
       "fib": {
-        "seurat": "TMKMH_fib_filtered_VAM.rds",
-        "gene_list": "TMKMH_fib_gene_list.rds",
-        "DEGs": "TMKMH_fib_DEGs_sig.txt",
-        "VAM_df": "TMKMH_fib_filtered_VAM_top.txt",
-        "DE_by_disease": "TMKMH_fib_DE_by_disease.txt",
-        "VAM_by_disease": "TMKMH_fib_VAMcdf_DE_by_disease.txt"
+        "seurat": "TMH_fib_VAM.qs2",
+        "gene_list": "TMH_fib_gene_list.qs2",
+        "DEGs": "TMH_fib_DEGs_sig.txt",
+        "VAM_df": "TMH_fib_VAM_top.txt",
+        "DE_by_disease": "TMH_fib_DE_by_disease.txt",
+        "VAM_by_disease": "TMH_fib_VAMcdf_DE_by_disease.txt"
       },
       "immune": {
-        "seurat": "TMKMH_immune_filtered_VAM.rds",
-        "gene_list": "TMKMH_immune_gene_list.rds",
-        "DEGs": "TMKMH_immune_DEGs_sig.txt",
-        "VAM_df": "TMKMH_immune_filtered_VAM_top.txt",
-        "DE_by_disease": ""
+        "seurat": "TMH_immune_VAM.qs2",
+        "gene_list": "TMH_immune_gene_list.qs2",
+        "DEGs": "TMH_immune_DEGs_sig.txt",
+        "VAM_df": "TMH_immune_VAM_top.txt",
+        "DE_by_disease": "TMH_immune_DE_by_disease.txt",
+        "VAM_by_disease": "TMH_immune_VAMcdf_DE_by_disease.txt"
       },
       "spatial_seurat": null
     }

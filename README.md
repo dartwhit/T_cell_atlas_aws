@@ -69,7 +69,7 @@ For quick local development you can run the Shiny app directly in R — outside 
 
 **Requirements:**
 - R with the app's packages installed (Seurat, VAM, shinymanager, bslib, DT, plotly, shinyjs, etc.)
-- A local copy of the data folder at `app_code/data/`, with one subfolder per study matching the dataset IDs in `app_code/config/datasets.tsv` (e.g. `tmkmh/`, `tabib/`, `gur/`, `ma/`, `khanna/`, `li/`)
+- A local copy of the data folder at `app_code/data/`, with one subfolder per study matching the dataset IDs in `app_code/config/datasets.tsv` (e.g. `tmh/`, `tabib/`, `gur/`, `ma/`, `khanna/`, `li/`)
 
 **Run from a terminal:**
 ```bash
@@ -92,7 +92,7 @@ The app prints its working directory to stderr on startup, so you can confirm it
 
 The CellChat tab is enabled only for studies with a complete `cellchat` entry in
 [app_code/config/dataset_details.json](app_code/config/dataset_details.json)
-(currently **Tabib et al. 2021** and the **TMH integrated dataset**). Each such
+(currently **Tabib et al. 2021**). Each such
 study expects these precomputed, stripped CellChat objects in its data directory:
 
 ```
