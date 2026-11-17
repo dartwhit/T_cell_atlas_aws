@@ -1,7 +1,11 @@
 {
   "tmh": {
     "comparison_type": "disease",
+    "comparison_column": "Diagnosis",
     "comparison_label": "SSc vs Healthy",
+    "celltype_column": {
+      "full": "Manual_Celltypes"
+    },
     "data_levels": {
       "Full": "full",
       "Fibroblasts": "fib",

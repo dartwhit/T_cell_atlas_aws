@@ -94,6 +94,7 @@ dataset_comparison_type <- list()
 dataset_comparison_label <- list()
 dataset_metadata_file <- list()
 dataset_comparison_column <- list()
+dataset_celltype_column <- list()
 
 # Populate lists based on dataset_meta and dataset_details
 for (i in 1:nrow(dataset_meta)) {
@@ -107,6 +108,9 @@ for (i in 1:nrow(dataset_meta)) {
     dataset_comparison_label[[dataset_id]] <- dataset_details[[dataset_id]]$comparison_label %||% DEFAULT_COMPARISON_LABEL
     dataset_metadata_file[[dataset_id]] <- dataset_details[[dataset_id]]$files$meta %||% NULL
     dataset_comparison_column[[dataset_id]] <- dataset_details[[dataset_id]]$comparison_column %||% "Disease"
+    # Optional per-level metadata column to use as the cell identities
+    # (e.g. {"full": "Manual_Celltypes"}); NULL keeps the object's own Idents.
+    dataset_celltype_column[[dataset_id]] <- dataset_details[[dataset_id]]$celltype_column
   } else {
     # If no details are found for the dataset in the JSON file, fall back to a minimal default structure.
     # This ensures that all datasets listed in datasets.tsv are available in the app, even without a detailed configuration.

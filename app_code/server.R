@@ -414,6 +414,24 @@ server <- function(input, output, session) {
       NULL
     })
     req(loaded)
+    # A metadata column literally named "ident" shadows the active identities:
+    # FetchData("ident") (used by DimPlot's default grouping) returns the column
+    # instead of Idents(). The TMH object has one holding the GEO study, which
+    # coloured the UMAP by study. Drop it so plots use the real identities.
+    if ("ident" %in% colnames(loaded$seurat@meta.data)) {
+      cat("Dropping metadata column 'ident' (shadows Idents)\n", file = stderr())
+      loaded$seurat$ident <- NULL
+    }
+    # Don't rely on whatever Idents the object was saved with (it can be left
+    # on e.g. the study); use the configured cell-type column when given.
+    celltype_col <- dataset_celltype_column[[sidebar_inputs$study()]][[sidebar_inputs$data_level()]]
+    if (!is.null(celltype_col)) {
+      if (celltype_col %in% colnames(loaded$seurat@meta.data)) {
+        Idents(loaded$seurat) <- factor(loaded$seurat@meta.data[[celltype_col]])
+      } else {
+        cat("Configured celltype_column not in metadata:", celltype_col, "\n", file = stderr())
+      }
+    }
     seurat_obj(loaded$seurat)
     gene_list_obj(loaded$gene_list)
     
@@ -980,7 +998,7 @@ server <- function(input, output, session) {
               features = feature_names,
               assay = "VAMcdf",
               cols = c("blue", "red"),
-              split.by = "Disease")
+              split.by = group_col())
     } else if (f_type == "Genes" && length(feature_names) > 3 && isTRUE(input$heatmap)) {
       assay_to_use <- if ("SCT" %in% Assays(curr_obj)) "SCT" else "RNA"
       make_tile_heatmap(curr_obj, feature_names, assay_to_use)
