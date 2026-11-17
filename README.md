@@ -92,7 +92,7 @@ The app prints its working directory to stderr on startup, so you can confirm it
 
 The CellChat tab is enabled only for studies with a complete `cellchat` entry in
 [app_code/config/dataset_details.json](app_code/config/dataset_details.json)
-(currently **Tabib et al. 2021**). Each such
+(currently **Tabib et al. 2021** and the **TMH integrated dataset**). Each such
 study expects these precomputed, stripped CellChat objects in its data directory:
 
 ```

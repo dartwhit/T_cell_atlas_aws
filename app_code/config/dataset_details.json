@@ -12,6 +12,13 @@
       "Immune cells": "immune"
     },
     "files": {
+      "cellchat": {
+        "merged": "cellchat/merged.rds",
+        "conditions": {
+          "HC": "cellchat/HC.rds",
+          "SSc": "cellchat/SSc.rds"
+        }
+      },
       "full": {
         "seurat": "TMH_full_VAM.qs2",
         "gene_list": "TMH_gene_list.qs2",
