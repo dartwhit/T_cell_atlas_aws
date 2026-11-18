@@ -69,6 +69,9 @@ cellchat_explorer_UI <- function(id, choices) {
         nav_panel(
           "L-R bubble",
           p("Ligand-receptor pairs across selected source and target cell types."),
+          helpText("With no sources, targets or pathways selected this plot includes every ",
+                   "cell-type pair and can take a while to draw. Narrow the filters ",
+                   "for a faster, more readable plot."),
           # The server sizes the plot to its L-R pairs and source/target
           # columns; wide plots scroll sideways instead of shrinking labels.
           div(style = "overflow-x: auto;",

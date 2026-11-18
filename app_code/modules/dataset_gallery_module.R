@@ -92,7 +92,11 @@ dataset_gallery_server <- function(id, cellchat_dataset_ids = character()) {
           h4(row$name),
           tags$div(class = "badges", badges),
           tags$p(sprintf("%s cells", row$n_cells)),
-          tags$div(class = "card-actions", action_buttons)
+          tags$div(
+            class = "card-actions",
+            style = "display:flex; flex-wrap:wrap; justify-content:center; gap:0.5rem;",
+            action_buttons
+          )
         )
       })
       div(class = "dataset-gallery", cards)

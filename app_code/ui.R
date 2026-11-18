@@ -109,7 +109,10 @@ ui <- page_navbar(
         });
       });
     ')),
-    tags$link(rel = "stylesheet", type = "text/css", href = "styles.css")
+    # Version the URL by file time so browsers fetch the new CSS after a deploy.
+    tags$link(rel = "stylesheet", type = "text/css",
+              href = paste0("styles.css?v=",
+                            as.integer(file.mtime(file.path("www", "styles.css")))))
 
 
   ),

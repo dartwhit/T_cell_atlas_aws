@@ -312,7 +312,9 @@ CELLCHAT_BUBBLE_ROW_PX <- 22
 CELLCHAT_BUBBLE_COL_PX <- 24
 CELLCHAT_BUBBLE_MARGIN_PX <- c(width = 380, height = 320)
 CELLCHAT_BUBBLE_MIN_PX <- c(width = 600, height = 500)
-CELLCHAT_BUBBLE_MAX_PX <- c(width = 8000, height = 8000)
+# Rendering and sending the PNG grows with its area, so keep the cap modest;
+# past it, narrowing sources/targets/pathways is the way to a readable plot.
+CELLCHAT_BUBBLE_MAX_PX <- c(width = 2800, height = 2800)
 
 cellchat_build_bubble <- function(merged, sources = NULL, targets = NULL, signaling = NULL,
                                   pval_max = 0.05) {
