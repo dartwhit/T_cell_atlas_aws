@@ -47,11 +47,11 @@ cellchat_explorer_UI <- function(id, choices) {
         nav_panel(
           "Comparison overview",
           p("Aggregated interactions per condition, differential interactions, and total comparison."),
-          plotOutput(ns("circle"), height = "460px"),
+          plotOutput(ns("circle"), height = "620px"),
           layout_columns(
-            col_widths = c(6, 6),
-            card(card_header("Differential interactions"), plotOutput(ns("diff"), height = "400px")),
-            card(card_header("Total interactions"), plotOutput(ns("compare"), height = "400px"))
+            col_widths = c(8, 4),
+            card(card_header("Differential interactions"), plotOutput(ns("diff"), height = "620px")),
+            card(card_header("Total interactions"), plotOutput(ns("compare"), height = "620px"))
           )
         ),
         nav_panel(
@@ -69,7 +69,13 @@ cellchat_explorer_UI <- function(id, choices) {
         nav_panel(
           "L-R bubble",
           p("Ligand-receptor pairs across selected source and target cell types."),
-          plotOutput(ns("bubble"), height = "720px")
+          helpText("With no sources, targets or pathways selected this plot includes every ",
+                   "cell-type pair and can take a while to draw. Narrow the filters ",
+                   "for a faster, more readable plot."),
+          # The server sizes the plot to its L-R pairs and source/target
+          # columns; wide plots scroll sideways instead of shrinking labels.
+          div(style = "overflow-x: auto;",
+              plotOutput(ns("bubble"), height = "auto"))
         ),
         nav_panel(
           "Signaling roles / rankNet",
@@ -224,12 +230,35 @@ cellchat_explorer_server <- function(id, dataset_configs, gallery_selection = NU
         cellchat_plot_signaling_role_heatmap(object, input$role_pattern, input$pathways)
       })
     })
-    output$bubble <- renderPlot({
-      draw_plot(function(data) {
-        cellchat_plot_bubble(data$merged, input$sources, input$targets, input$pathways,
-                             pval_max = input$pval_max)
-      })
+    # Built once here so the size functions and the renderer share one plot.
+    bubble_plot <- reactive({
+      data <- cellchat_data()
+      if (!is.null(data$error)) return(list(plot = NULL, error = data$error))
+      tryCatch(
+        list(plot = cellchat_build_bubble(data$merged, input$sources, input$targets,
+                                          input$pathways, pval_max = input$pval_max),
+             error = NULL),
+        error = function(error) {
+          if (inherits(error, "shiny.silent.error")) stop(error)
+          list(plot = NULL, error = paste("CellChat plot could not be generated:",
+                                          conditionMessage(error)))
+        }
+      )
     })
+    bubble_size <- reactive({
+      container <- session$clientData[[paste0("output_", session$ns("bubble"), "_width")]]
+      result <- bubble_plot()
+      if (is.null(result$plot)) return(list(width = max(container, 600), height = 720))
+      cellchat_bubble_size(result$plot, min_width = container)
+    })
+    output$bubble <- renderPlot({
+      result <- bubble_plot()
+      if (!is.null(result$error)) {
+        cellchat_draw_plot_error(result$error)
+      } else {
+        print(result$plot)
+      }
+    }, width = function() bubble_size()$width, height = function() bubble_size()$height)
     output$ranknet <- renderPlot({
       draw_plot(function(data) {
         cellchat_plot_ranknet(data$merged, input$rank_stacked,
@@ -275,7 +304,7 @@ cellchat_explorer_server <- function(id, dataset_configs, gallery_selection = NU
 
     output$download <- downloadHandler(
       filename = function() {
-        paste0("cellchat_", selected_study(), "_", input$level, "_filtered.csv")
+        paste0("cellchat_", study_file_tag(selected_study()), "_", input$level, "_filtered.csv")
       },
       content = function(file) {
         utils::write.csv(filtered_table(), file, row.names = FALSE)

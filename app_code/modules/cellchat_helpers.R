@@ -209,17 +209,28 @@ cellchat_pval_threshold <- function(pval_max, default = 0.05) {
   pval_max + 1e-9
 }
 
+# Circle plots place one label per cell type around the ring. CellChat's
+# default label size (cex = 1) only fits ~10 groups before neighbouring labels
+# collide, and integrated datasets such as TMH have far more. Shrink labels as
+# the ring gets crowded, but never below a readable floor.
+cellchat_circle_label_cex <- function(n_groups) {
+  if (!is.finite(n_groups) || n_groups <= 10) return(0.95)
+  max(0.6, 0.95 * sqrt(10 / n_groups))
+}
+
 cellchat_plot_circle_comparison <- function(merged, measure = c("weight", "count")) {
   measure <- match.arg(measure)
   datasets <- cellchat_merged_datasets(merged)
   matrices <- lapply(datasets, function(dataset) merged@net[[dataset]][[measure]])
   maximum <- max(vapply(matrices, function(matrix) max(matrix, na.rm = TRUE), numeric(1)))
-  old_parameters <- graphics::par(mfrow = c(1, length(datasets)), xpd = TRUE)
+  label_cex <- cellchat_circle_label_cex(max(vapply(matrices, nrow, integer(1))))
+  old_parameters <- graphics::par(mfrow = c(1, length(datasets)), xpd = TRUE,
+                                  mar = c(1, 1, 2, 1))
   on.exit(graphics::par(old_parameters), add = TRUE)
   for (index in seq_along(datasets)) {
     CellChat::netVisual_circle(
       matrices[[index]], weight.scale = TRUE, label.edge = FALSE,
-      edge.weight.max = maximum,
+      edge.weight.max = maximum, vertex.label.cex = label_cex, margin = 0.3,
       title.name = paste0(datasets[[index]], " (", measure, ")")
     )
   }
@@ -228,10 +239,14 @@ cellchat_plot_circle_comparison <- function(merged, measure = c("weight", "count
 
 cellchat_plot_diff_interaction <- function(merged, measure = c("count", "weight"),
                                            sources = NULL, targets = NULL) {
+  n_groups <- length(cellchat_celltypes(merged))
+  old_parameters <- graphics::par(xpd = TRUE, mar = c(1, 1, 2, 1))
+  on.exit(graphics::par(old_parameters), add = TRUE)
   CellChat::netVisual_diffInteraction(
     merged, weight.scale = TRUE, measure = match.arg(measure),
     sources.use = cellchat_selection_or_null(sources),
-    targets.use = cellchat_selection_or_null(targets)
+    targets.use = cellchat_selection_or_null(targets),
+    vertex.label.cex = cellchat_circle_label_cex(n_groups), margin = 0.3
   )
   invisible(NULL)
 }
@@ -288,8 +303,21 @@ cellchat_plot_signaling_role_heatmap <- function(obj, pattern = c("outgoing", "i
   invisible(NULL)
 }
 
-cellchat_plot_bubble <- function(merged, sources = NULL, targets = NULL, signaling = NULL,
-                                 pval_max = 0.05) {
+# netVisual_bubble() uses theme_linedraw's 0.8 x font.size (8 pt by default)
+# for axis text and draws into whatever canvas it gets, so with many L-R pairs
+# the y labels overprint and the source -> target labels are unreadably small.
+# Use a larger font and size the canvas to the number of rows and columns.
+CELLCHAT_BUBBLE_FONT_PT <- 13
+CELLCHAT_BUBBLE_ROW_PX <- 22
+CELLCHAT_BUBBLE_COL_PX <- 24
+CELLCHAT_BUBBLE_MARGIN_PX <- c(width = 380, height = 320)
+CELLCHAT_BUBBLE_MIN_PX <- c(width = 600, height = 500)
+# Rendering and sending the PNG grows with its area, so keep the cap modest;
+# past it, narrowing sources/targets/pathways is the way to a readable plot.
+CELLCHAT_BUBBLE_MAX_PX <- c(width = 2800, height = 2800)
+
+cellchat_build_bubble <- function(merged, sources = NULL, targets = NULL, signaling = NULL,
+                                  pval_max = 0.05) {
   plot <- CellChat::netVisual_bubble(
     merged,
     sources.use = cellchat_selection_or_null(sources),
@@ -297,9 +325,44 @@ cellchat_plot_bubble <- function(merged, sources = NULL, targets = NULL, signali
     signaling = cellchat_selection_or_null(signaling),
     thresh = cellchat_pval_threshold(pval_max),
     comparison = seq_along(cellchat_merged_datasets(merged)),
-    angle.x = 45
+    angle.x = 45, font.size = CELLCHAT_BUBBLE_FONT_PT
   )
-  print(plot)
+  if (inherits(plot, "ggplot")) {
+    # `+ theme()` merges into the existing elements, so the per-condition
+    # colours and rotation CellChat sets on the x labels are kept.
+    plot <- plot + ggplot2::theme(
+      axis.text.x = ggplot2::element_text(size = CELLCHAT_BUBBLE_FONT_PT),
+      axis.text.y = ggplot2::element_text(size = CELLCHAT_BUBBLE_FONT_PT),
+      legend.text = ggplot2::element_text(size = CELLCHAT_BUBBLE_FONT_PT - 1),
+      legend.title = ggplot2::element_text(size = CELLCHAT_BUBBLE_FONT_PT)
+    )
+  }
+  plot
+}
+
+# Pixel size for a built bubble plot; `min_width` is the container width so the
+# plot fills it and only scrolls horizontally when the columns need more room.
+cellchat_bubble_size <- function(plot, min_width = NULL) {
+  rows <- 0
+  cols <- 0
+  if (inherits(plot, "ggplot") && is.data.frame(plot$data)) {
+    data <- plot$data
+    if ("interaction_name_2" %in% names(data)) rows <- length(unique(data$interaction_name_2))
+    if ("source.target" %in% names(data)) cols <- length(unique(data$source.target))
+  }
+  min_w <- max(CELLCHAT_BUBBLE_MIN_PX[["width"]], if (is.numeric(min_width)) min_width else 0)
+  width <- CELLCHAT_BUBBLE_MARGIN_PX[["width"]] + cols * CELLCHAT_BUBBLE_COL_PX
+  height <- CELLCHAT_BUBBLE_MARGIN_PX[["height"]] + rows * CELLCHAT_BUBBLE_ROW_PX
+  list(
+    width = round(min(max(width, min_w), CELLCHAT_BUBBLE_MAX_PX[["width"]])),
+    height = round(min(max(height, CELLCHAT_BUBBLE_MIN_PX[["height"]]),
+                       CELLCHAT_BUBBLE_MAX_PX[["height"]]))
+  )
+}
+
+cellchat_plot_bubble <- function(merged, sources = NULL, targets = NULL, signaling = NULL,
+                                 pval_max = 0.05) {
+  print(cellchat_build_bubble(merged, sources, targets, signaling, pval_max))
   invisible(NULL)
 }
 

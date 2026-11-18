@@ -29,6 +29,12 @@ read_object <- function(path) {
     stop("read_object(): 'path' must be a single non-empty file path; got ",
          deparse(path))
   }
+  # A path that already names a .qs2 file (e.g. data shipped only as qs2).
+  if (grepl("\\.qs2$", path, ignore.case = TRUE)) {
+    if (!qs2_available) stop("read_object(): qs2 package is required to read ", path)
+    cat("[read_object] qs2:", path, "\n", file = stderr())
+    return(qs2::qs_read(path, nthreads = qs2_read_threads))
+  }
   if (qs2_available) {
     qs2_path <- sub("\\.rds$", ".qs2", path, ignore.case = TRUE)
     if (qs2_path != path && file.exists(qs2_path)) {
@@ -88,6 +94,7 @@ dataset_comparison_type <- list()
 dataset_comparison_label <- list()
 dataset_metadata_file <- list()
 dataset_comparison_column <- list()
+dataset_celltype_column <- list()
 
 # Populate lists based on dataset_meta and dataset_details
 for (i in 1:nrow(dataset_meta)) {
@@ -101,6 +108,9 @@ for (i in 1:nrow(dataset_meta)) {
     dataset_comparison_label[[dataset_id]] <- dataset_details[[dataset_id]]$comparison_label %||% DEFAULT_COMPARISON_LABEL
     dataset_metadata_file[[dataset_id]] <- dataset_details[[dataset_id]]$files$meta %||% NULL
     dataset_comparison_column[[dataset_id]] <- dataset_details[[dataset_id]]$comparison_column %||% "Disease"
+    # Optional per-level metadata column to use as the cell identities
+    # (e.g. {"full": "Manual_Celltypes"}); NULL keeps the object's own Idents.
+    dataset_celltype_column[[dataset_id]] <- dataset_details[[dataset_id]]$celltype_column
   } else {
     # If no details are found for the dataset in the JSON file, fall back to a minimal default structure.
     # This ensures that all datasets listed in datasets.tsv are available in the app, even without a detailed configuration.
@@ -115,6 +125,19 @@ for (i in 1:nrow(dataset_meta)) {
 
 # Create a named vector of dataset choices for use in UI dropdowns
 dataset_choices <- setNames(dataset_meta$id, dataset_meta$name)
+
+# User-facing label for a dataset id (the `name` column), e.g. "TMH integrated
+# dataset". Use this instead of the raw id anywhere text is shown to users,
+# since ids are tied to data folder names and may lag behind renames.
+study_label <- function(id) {
+  label <- names(dataset_choices)[match(id, dataset_choices)]
+  if (length(label) == 0 || is.na(label)) id else label
+}
+
+# Short tag for download filenames: first word of the label, e.g. "TMH", "Tabib".
+study_file_tag <- function(id) {
+  gsub("[^A-Za-z0-9]+", "_", sub("\\s.*$", "", study_label(id)))
+}
 
 # scRNA-only choices for the Explore sidebar (excludes spatial-only datasets)
 scrna_dataset_choices <- setNames(

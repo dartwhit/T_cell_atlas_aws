@@ -18,6 +18,15 @@
   border-radius: 0.25rem;
 }
 
+/* Buttons are inline siblings with no whitespace between them in the
+   generated HTML, so space them explicitly and let them wrap on narrow cards. */
+.dataset-card .card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
 .dataset-card .badge {
   display: inline-block;
   margin-top: 0.5rem;
