@@ -52,10 +52,8 @@ server <- function(input, output, session) {
     res_auth <- secure_server(
       check_credentials = check_credentials(db = db_path)
     )
-    output$welcome <- renderText(paste("Welcome,", res_auth$user))
   } else {
     cat("LOCAL_DEV mode: authentication disabled\n", file = stderr())
-    output$welcome <- renderText("Local dev")
   }
 
 
