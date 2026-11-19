@@ -226,17 +226,7 @@ ui <- page_navbar(
     )
     )
 
-  ),
-  nav_spacer(),
-  nav_item(textOutput("welcome")),
-  nav_panel(
-    icon(
-      "calendar",
-      align = "right"
-    ) 
   )
-  
-
 )
 
 # Wrap UI with shinymanager authentication (skipped in LOCAL_DEV mode)
